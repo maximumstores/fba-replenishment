@@ -22,6 +22,11 @@ try:
 except ImportError:
     pass
 
+LIVE_DEFAULTS = {
+    "HOPTED_SOURCE": "bq", "SOURCES_SOURCE": "bq", "INCOMING_SOURCE": "bq", "REFERENCE_SOURCE": "bq",
+    "SHIPMENTS_SOURCE": "sheet:128q44-RfvoJSLOHMHT-RaYwJMMJKleCvuQxI9uLgGfk",
+    "BQ_PROJECT": "reorder-497714", "USE_PLANNER_INCOMING": "false", "PLAN_MODE": "off",
+}
 SECRETS_STATUS = {"found": False, "keys": 0, "sa": False}
 
 
@@ -34,6 +39,9 @@ def _bridge_secrets() -> None:
     SECRETS_STATUS["found"] = bool(secrets)
     sa = secrets.pop("gcp_service_account", None)
     SECRETS_STATUS["sa"] = sa is not None
+    if sa is not None:  # источники — не секрет: если есть ключ, читаем боевые данные по умолчанию
+        for k, v in LIVE_DEFAULTS.items():
+            os.environ.setdefault(k, v)
     if sa is not None and not os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON"):
         import json
         os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"] = json.dumps(dict(sa))
