@@ -27,6 +27,7 @@ LIVE_DEFAULTS = {
     "HOPTED_SOURCE": "bq", "SOURCES_SOURCE": "bq", "INCOMING_SOURCE": "bq", "REFERENCE_SOURCE": "bq",
     "SHIPMENTS_SOURCE": "sheet:128q44-RfvoJSLOHMHT-RaYwJMMJKleCvuQxI9uLgGfk",
     "BQ_PROJECT": "reorder-497714", "USE_PLANNER_INCOMING": "false", "PLAN_MODE": "off",
+    "AWD_LIVE_SOURCE": "sheet:1acpHlfBiJjFm96VmFksRmKTnktULTgmu7iESYFDLUZw",  # файл «Stock Amazon Merino», вкладка AWD
     "BATCHES_CSV": "",  # боевой режим: демо-партии из demo/batches.csv в расчёт не попадают
 }
 SECRETS_STATUS = {"found": False, "keys": 0, "sa": False}

@@ -131,3 +131,25 @@ def test_shipments_failure_does_not_break_load_all(monkeypatch):
     data = loaders.load_all(env)
     assert data["shipments"] is None and data["transit"] is None
     assert "PermissionError" in data["warnings"][0]
+
+
+def test_awd_live_report_replaces_snapshot_and_zeroes_missing():
+    import loaders
+    rows = [["Product Name", "", "ASIN", "Available in AWD"], [], ["Product name", "SKU", "ASIN", "On-hand quantity"],
+            ["x", "s1", "B0AAAAAAA1", 100], ["y", "s2", "B0AAAAAAA1", 20], ["z", "s3", "B0AAAAAAA3", "7"], ["junk", "", "n/a", 5]]
+    live = loaders.awd_from_rows(rows)
+    assert live.set_index("asin")["awd_live"].to_dict() == {"B0AAAAAAA1": 120.0, "B0AAAAAAA3": 7.0}
+    snap = pd.DataFrame({"asin": ["B0AAAAAAA1", "B0AAAAAAA2"], "awd_qty": [100, 50],
+                         "wrh_qty": [5, 6], "order_qty": [1, 2], "fba_stock_transit": [0, 0]})
+    out, note = loaders.apply_live_awd(snap, live)
+    got = out.set_index("asin")
+    assert got.loc["B0AAAAAAA1", "awd_qty"] == 120 and got.loc["B0AAAAAAA2", "awd_qty"] == 0
+    assert got.loc["B0AAAAAAA3", "awd_qty"] == 7 and got.loc["B0AAAAAAA2", "wrh_qty"] == 6 and note.startswith("AWD взят")
+
+
+def test_awd_live_rejected_when_sum_is_absurd():
+    import loaders
+    live = pd.DataFrame({"asin": ["B0AAAAAAA1"], "awd_live": [1.0]})
+    snap = pd.DataFrame({"asin": ["B0AAAAAAA1"], "awd_qty": [1000], "wrh_qty": [0], "order_qty": [0], "fba_stock_transit": [0]})
+    out, note = loaders.apply_live_awd(snap, live)
+    assert out is snap and "не применён" in note

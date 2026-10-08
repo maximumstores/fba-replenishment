@@ -131,7 +131,7 @@ def _csv(path: str) -> pd.DataFrame:
     return pd.read_csv(path, dtype=str, keep_default_na=False)
 
 
-def _gspread_tab(spec: str, tab: str, rng: str | None, credentials_file: str | None) -> pd.DataFrame:
+def _gspread_values(spec: str, tab: str, rng: str | None, credentials_file: str | None) -> list[list]:
     import gspread
 
     creds = credentials_file or os.getenv("GOOGLE_CREDENTIALS_FILE")
@@ -151,8 +151,11 @@ def _gspread_tab(spec: str, tab: str, rng: str | None, credentials_file: str | N
             raise RuntimeError("Для чтения Google Sheets нужен GOOGLE_CREDENTIALS_FILE (json сервисного аккаунта), GOOGLE_SERVICE_ACCOUNT_JSON "
                                f"или учётные данные окружения (gcloud auth application-default login): {exc}") from exc
     ws = client.open_by_key(spec[len("sheet:"):]).worksheet(tab)
-    values = ws.get(rng, value_render_option="UNFORMATTED_VALUE") if rng else ws.get(value_render_option="UNFORMATTED_VALUE")
-    return _rows_to_df(values)
+    return ws.get(rng, value_render_option="UNFORMATTED_VALUE") if rng else ws.get(value_render_option="UNFORMATTED_VALUE")
+
+
+def _gspread_tab(spec: str, tab: str, rng: str | None, credentials_file: str | None) -> pd.DataFrame:
+    return _rows_to_df(_gspread_values(spec, tab, rng, credentials_file))
 
 
 def load_hopted(spec: str, credentials_file: str | None = None) -> pd.DataFrame:
@@ -202,6 +205,61 @@ def load_sources(spec: str | None) -> pd.DataFrame | None:
         return _sources_from_bq_rows(_bq_frame_to_rows(_bq_query(SOURCES_SQL.format(project=_project()))))
     df = _csv(spec)
     return df.rename(columns={c: SOURCES_ALIASES.get(str(c).strip().lower(), c) for c in df.columns})
+
+
+AWD_LIVE_TAB = "AWD"
+AWD_ONHAND_TITLES = ("on-hand quantity", "available in awd")
+
+
+def _num(v) -> float:
+    try:
+        return float(str(v).replace(",", ".").replace("\xa0", "").replace(" ", "")) if str(v).strip() else 0.0
+    except ValueError:
+        return 0.0
+
+
+def awd_from_rows(rows: list[list]) -> pd.DataFrame:
+    """Вкладка AWD (отчёт Amazon): заголовок — строка, где есть «ASIN» и «On-hand quantity»/«Available in AWD».
+
+    Берём последний такой заголовок в первых 30 строках, суммируем по ASIN."""
+    head = None
+    for i, r in enumerate(rows[:30]):
+        low = [str(c).strip().lower() for c in r]
+        if "asin" in low and any(t in low for t in AWD_ONHAND_TITLES):
+            head = i
+    if head is None:
+        raise ValueError("На вкладке AWD не нашёл заголовок с «ASIN» и «On-hand quantity»")
+    low = [str(c).strip().lower() for c in rows[head]]
+    ia = low.index("asin")
+    io = next(low.index(t) for t in AWD_ONHAND_TITLES if t in low)
+    out: dict[str, float] = {}
+    for r in rows[head + 1:]:
+        if len(r) <= max(ia, io):
+            continue
+        asin = str(r[ia]).strip().upper()
+        if len(asin) == 10 and asin[0] == "B" and asin.isalnum():
+            out[asin] = out.get(asin, 0.0) + _num(r[io])
+    return pd.DataFrame({"asin": list(out), "awd_live": list(out.values())})
+
+
+def apply_live_awd(sources: pd.DataFrame | None, live: pd.DataFrame) -> tuple[pd.DataFrame | None, str]:
+    """Подменяет awd_qty свежими остатками AWD; ASIN, которых нет в отчёте, получают 0. Защита: странные суммы не применяем."""
+    live_sum = float(live["awd_live"].sum())
+    if sources is None or live.empty:
+        return sources, "Свежий AWD не применён: нет базы остатков или отчёт пуст."
+    old = sources.copy()
+    old_sum = float(pd.to_numeric(old["awd_qty"], errors="coerce").fillna(0).sum())
+    if old_sum > 0 and not (0.2 <= live_sum / old_sum <= 5):
+        return sources, (f"Свежий AWD не применён: сумма {live_sum:,.0f} шт. слишком отличается от снимка "
+                         f"{old_sum:,.0f} шт. — проверьте вкладку AWD.").replace(",", " ")
+    old["asin"] = old["asin"].astype(str).str.upper()
+    m = old.merge(live, on="asin", how="outer")
+    for c in m.columns:
+        if c not in ("asin", "awd_live", "awd_qty"):
+            m[c] = m[c].where(m[c].notna(), 0)
+    m["awd_qty"] = m["awd_live"].fillna(0)
+    m = m.drop(columns="awd_live")
+    return m, (f"AWD взят из свежего отчёта: {live_sum:,.0f} шт. (в снимке на начало месяца было {old_sum:,.0f} шт.).").replace(",", " ")
 
 
 def load_incoming(spec: str | None) -> pd.DataFrame | None:
@@ -264,7 +322,8 @@ def build_meta(data: dict, specs: dict, stats: dict | None) -> list[dict]:
         "Источник": "Остатки AWD и склада США, заказы в производстве", "Откуда": specs["sources"] or "—",
         "Для чего": "Можно ли пополнить с AWD или склада; есть ли что отправлять морем или воздухом" + (
             "" if awd is None else f" (сейчас: AWD {awd:,.0f} шт., склад {wrh:,.0f} шт.)".replace(",", " ")),
-        "Строк": 0 if src is None else len(src), "Данные на": "ночное обновление" if specs["sources"] == "bq" else "",
+        "Строк": 0 if src is None else len(src), "Данные на": ("AWD свежий (файл Сергея), склад и заказы — снимок на начало месяца" if data.get("awd_note", "").startswith("AWD взят")
+                      else "снимок на начало месяца") if specs["sources"] == "bq" else "",
         "Статус": "нет" if src is None else "ок",
     })
     inc = data["incoming"]
@@ -301,6 +360,7 @@ def load_all(env: dict | None = None, credentials_file: str | None = None) -> di
         "batches": env.get("BATCHES_CSV", "demo/batches.csv"),
         "incoming": env.get("INCOMING_SOURCE", ""),
         "shipments": env.get("SHIPMENTS_SOURCE", ""),
+        "awd_live": env.get("AWD_LIVE_SOURCE", ""),
     }
     warnings: list[str] = []
     try:
@@ -312,11 +372,22 @@ def load_all(env: dict | None = None, credentials_file: str | None = None) -> di
             f"Фактические сроки доставки не загружены ({type(exc).__name__}). Откройте доступ читателя к листу "
             f"Logistics Dashboard для {who}; пока срок «Море» берётся из настройки LEAD_SEA."
         )
+    sources = load_sources(specs["sources"])
+    awd_note = ""
+    if specs["awd_live"].startswith("sheet:"):
+        try:
+            live = awd_from_rows(_gspread_values(specs["awd_live"], AWD_LIVE_TAB, None, credentials_file))
+            sources, awd_note = apply_live_awd(sources, live)
+        except Exception as exc:  # свежий AWD необязателен: остаёмся на снимке
+            awd_note = f"Свежий AWD не загружен ({type(exc).__name__}: {exc}); AWD взят из снимка на начало месяца."
+        if not awd_note.startswith("AWD взят"):
+            warnings.append(awd_note)
     data = {
         "warnings": warnings,
+        "awd_note": awd_note,
         "hopted": load_hopted(specs["hopted"], credentials_file),
         "reference": load_reference(specs["reference"]),
-        "sources": load_sources(specs["sources"]),
+        "sources": sources,
         "batches": _optional_csv(specs["batches"]),
         "incoming": load_incoming(specs["incoming"]),
         "shipments": shipments,
