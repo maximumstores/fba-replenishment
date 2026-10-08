@@ -313,6 +313,19 @@ def show_workbook_scan() -> None:
                 st.caption(" / ".join(" | ".join(r) for r in t["head"]))
 
 
+def show_tab_viewer() -> None:
+    """Админский просмотр любой вкладки файла Сергея."""
+    with st.expander("Диагностика: показать вкладку файла Сергея"):
+        spec = os.getenv("AWD_LIVE_SOURCE", "")
+        tab = st.text_input("Название вкладки", "Fulfillment-BOX CA", key="viewer_tab")
+        n = st.slider("Сколько строк", 20, 400, 80, key="viewer_rows")
+        if spec.startswith("sheet:") and st.button("Показать", key="viewer_btn"):
+            try:
+                st.dataframe(loaders.tab_preview(spec, tab, n), use_container_width=True)
+            except Exception as exc:
+                st.error(f"{type(exc).__name__}: {exc}")
+
+
 def show_warehouse_check(report: pd.DataFrame | None = None) -> None:
     """Админская проверка сводных вкладок склада в файле Сергея."""
     with st.expander("Диагностика: сводные вкладки склада"):
@@ -551,6 +564,7 @@ def main() -> None:
             show_restock_diag(data, report)
             show_workbook_scan()
             show_warehouse_check(report)
+            show_tab_viewer()
 
 
 main()

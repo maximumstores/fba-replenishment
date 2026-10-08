@@ -628,3 +628,17 @@ def find_hints(spec: str, tabs: list[str] | None = None, words: tuple[str, ...] 
         counts.setdefault(f["tab"], {}).setdefault(f["word"], 0)
         counts[f["tab"]][f["word"]] += 1
     return {"tabs_read": use, "counts": counts, "samples": found[:40], "heads": heads}
+
+
+def tab_preview(spec: str, tab: str, rows: int = 80, credentials_file: str | None = None) -> pd.DataFrame:
+    """Первые строки вкладки как есть (без шапки), для просмотра в админской диагностике."""
+    book = _gspread_book(spec, credentials_file)
+    ws = next((w for w in book.worksheets() if w.title.strip().lower() == tab.strip().lower()), None)
+    if ws is None:
+        raise ValueError(f"Нет вкладки «{tab}»")
+    vals = ws.get(f"A1:AZ{rows}", value_render_option="FORMATTED_VALUE")
+    width = max((len(r) for r in vals), default=0)
+    df = pd.DataFrame([[str(c) for c in (r + [""] * width)[:width]] for r in vals])
+    df.columns = [f"C{i + 1}" for i in range(width)]
+    df.index = range(1, len(df) + 1)
+    return df.loc[:, (df != "").any(axis=0)] if not df.empty else df
