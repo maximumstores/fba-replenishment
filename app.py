@@ -311,6 +311,18 @@ def show_workbook_scan() -> None:
                 st.caption(" / ".join(" | ".join(r) for r in t["head"]))
 
 
+def show_warehouse_check() -> None:
+    """Админская проверка сводных вкладок склада в файле Сергея."""
+    with st.expander("Диагностика: сводные вкладки склада"):
+        spec = os.getenv("AWD_LIVE_SOURCE", "")
+        if not spec.startswith("sheet:") or not st.button("Проверить сводки склада", key="wh_btn"):
+            return
+        try:
+            st.json(loaders.warehouse_pivots_check(spec))
+        except Exception as exc:
+            st.error(f"{type(exc).__name__}: {exc}")
+
+
 def show_usage() -> None:
     st.subheader("Активность дашборда")
     st.caption("Время киевское. Регулярность — среднее по сотрудникам доля рабочих дней с входом; это число идёт в Scorecard.")
@@ -511,6 +523,7 @@ def main() -> None:
             show_usage()
             show_restock_diag(data, report)
             show_workbook_scan()
+            show_warehouse_check()
 
 
 main()

@@ -457,3 +457,29 @@ def scan_workbook(spec: str, credentials_file: str | None = None, only: list[str
                     "asin_cols": {k: v for k, v in sorted(asin_cols.items())},
                     "head": [[str(c).replace("\n", " ")[:18] for c in r[:16]] for r in rows[:5]]})
     return out
+
+
+def warehouse_pivots_check(spec: str, credentials_file: str | None = None) -> dict:
+    """Суммы по сводным вкладкам склада: Pivot Table warehouse (ASIN→количество) и pivot Warehouses FFbox (4 блока)."""
+    book = _gspread_book(spec, credentials_file)
+
+    def asin_ok(v) -> bool:
+        v = str(v).strip().upper()
+        return len(v) == 10 and v[:2] == "B0" and v.isalnum()
+
+    res: dict = {}
+    rows = book.worksheet("Pivot Table warehouse").get(value_render_option="UNFORMATTED_VALUE")
+    pairs = [(str(r[0]).strip().upper(), _num(r[1])) for r in rows if len(r) > 1 and asin_ok(r[0])]
+    total_cell = next((r[:3] for r in rows if r and str(r[0]).strip().lower() == "grand total"), None)
+    res["pivot_warehouse"] = {"asin": len(pairs), "uniq": len({a for a, _ in pairs}), "sum": round(sum(q for _, q in pairs)),
+                              "nonzero": sum(1 for _, q in pairs if q > 0), "grand_total_cell": total_cell,
+                              "head": [[str(c)[:20] for c in r[:6]] for r in rows[:4]]}
+    rows = book.worksheet("pivot Warehouses FFbox").get(value_render_option="UNFORMATTED_VALUE")
+    names = [str(c).strip() for c in rows[0]] if rows else []
+    blocks = {}
+    for col in (0, 3, 6, 9):
+        label = names[col] if col < len(names) and names[col] else f"блок {col}"
+        items = [(str(r[col]).strip().upper(), _num(r[col + 1])) for r in rows if len(r) > col + 1 and asin_ok(r[col])]
+        blocks[label] = {"asin": len(items), "sum": round(sum(q for _, q in items)), "nonzero": sum(1 for _, q in items if q > 0)}
+    res["pivot_ffbox"] = blocks
+    return res
