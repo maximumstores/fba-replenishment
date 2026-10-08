@@ -193,7 +193,10 @@ def main() -> None:
     try:
         data = get_inputs()
     except Exception as exc:  # понятная ошибка вместо трейсбека
-        st.error(f"Не удалось прочитать данные: {exc}")
+        import traceback
+        st.error(f"Не удалось прочитать данные: {type(exc).__name__}: {exc}")
+        with st.expander("Подробности ошибки (без секретов)"):
+            st.code("".join(traceback.format_exception(exc))[-3000:])
         st.info("Проверьте HOPTED_SOURCE / REFERENCE_SOURCE в .env и доступ сервисного аккаунта к файлам (см. README).")
         st.stop()
 
