@@ -22,23 +22,35 @@ try:
 except ImportError:
     pass
 
+SECRETS_STATUS = {"found": False, "keys": 0, "sa": False}
+
+
 def _bridge_secrets() -> None:
     """Streamlit Cloud: значения из Secrets → переменные окружения (если не заданы), ключ SA → GOOGLE_SERVICE_ACCOUNT_JSON."""
     try:
         secrets = dict(st.secrets)
     except Exception:  # secrets.toml нет (локальный запуск) — читаем только .env
         return
+    SECRETS_STATUS["found"] = bool(secrets)
     sa = secrets.pop("gcp_service_account", None)
+    SECRETS_STATUS["sa"] = sa is not None
     if sa is not None and not os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON"):
         import json
         os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"] = json.dumps(dict(sa))
     for k, v in secrets.items():
         if isinstance(v, (str, int, float, bool)) and k not in os.environ:
             os.environ[k] = str(v)
+    SECRETS_STATUS["keys"] = len(secrets)
 
 
 _bridge_secrets()
 st.set_page_config(page_title="FBA США: пополнение", layout="wide")
+if not os.getenv("HOPTED_SOURCE"):
+    st.warning(
+        "Сейчас показаны ДЕМО-данные: переменная HOPTED_SOURCE не задана. "
+        f"Secrets найдены: {'да' if SECRETS_STATUS['found'] else 'нет'}, "
+        f"параметров: {SECRETS_STATUS['keys']}, ключ сервисного аккаунта: {'да' if SECRETS_STATUS['sa'] else 'нет'}. "
+        "Проверьте Manage app → Settings → Secrets (должен быть сохранён блок с HOPTED_SOURCE = \"bq\").")
 
 STATUS_COLORS = {
     "OUT": "#e5484d", "CRITICAL": "#e5484d", "URGENT": "#f76b15", "ACTION": "#f5a524",
