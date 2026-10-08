@@ -1,0 +1,9 @@
+.env
+real/
+state/*.json
+.streamlit/secrets.toml
+*.json.key
+sa*.json
+__pycache__/
+.pytest_cache/
+*.zip

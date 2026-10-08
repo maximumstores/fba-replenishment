@@ -1,0 +1,314 @@
+"""Загрузка входных данных. Любой источник можно заменить CSV-файлом.
+
+HOPTED_SOURCE     csv-путь | sheet:<ID файла Hopted> | bq        (bq = mt.hopted_us_native, обновляется ночью)
+REFERENCE_SOURCE  csv-путь | bq                                 (forecast.dim_product + план месяца)
+SOURCES_SOURCE    csv-путь | bq                                 (остатки AWD / склад и заказы: mt.amazon_starting_balance_native)
+                  (старое имя SOURCES_CSV тоже работает)
+BATCHES_CSV       необязательно: asin, qty, eta, destination    (партии из Orders-Stock)
+INCOMING_SOURCE   необязательно: csv-путь | bq                  (приходы по месяцам из планировщика, forecast.psi_projection)
+SHIPMENTS_SOURCE  необязательно: csv-путь | sheet:<ID>          (лист calc_shipments из Logistics Dashboard: сроки доставки)
+
+load_all() возвращает данные и список «источников» (meta) для вкладки «Источники» в дашборде.
+"""
+from __future__ import annotations
+
+import base64
+import json
+import math
+import os
+from datetime import datetime
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+import calc
+
+HOPTED_TAB = os.getenv("HOPTED_TAB", "US V2")
+HOPTED_RANGE = os.getenv("HOPTED_RANGE", "A:T")  # правее T лежат формулы-сводки, они не нужны
+SHIPMENTS_TAB = os.getenv("SHIPMENTS_TAB", "calc_shipments")
+BQ_DEFAULT_PROJECT = "reorder-497714"
+
+REFERENCE_SQL = """
+SELECT
+  p.asin, p.old_asin, p.group_key, p.parent_group, p.category, p.color, p.size,
+  p.abcd_class, p.active_us,
+  pp.plan_units AS plan_units_month
+FROM `{project}.forecast.dim_product` p
+LEFT JOIN (
+  SELECT asin, SUM(plan_units) AS plan_units
+  FROM `{project}.forecast.psi_projection`
+  WHERE month = DATE_TRUNC(CURRENT_DATE(), MONTH)
+  GROUP BY asin
+) pp USING (asin)
+"""
+HOPTED_SQL = "SELECT * FROM `{project}.mt.hopted_us_native`"
+SOURCES_SQL = "SELECT * FROM `{project}.mt.amazon_starting_balance_native`"
+INCOMING_SQL = """
+SELECT asin, month, SUM(incoming) AS incoming
+FROM `{project}.forecast.psi_projection`
+WHERE incoming > 0 AND month >= DATE_TRUNC(CURRENT_DATE(), MONTH)
+GROUP BY asin, month
+"""
+
+# В листе остатков заголовки лежат в строке с «ASIN» в колонке A; нужные колонки ищем по тексту заголовка
+SOURCES_HEADERS = {
+    "awd_qty": "AWD US",
+    "wrh_qty": "WRH US+ Inbound",
+    "order_qty": "Order US",
+    "fba_stock_transit": "Stock+In transit US",
+}
+SOURCES_ALIASES = {"awd_us": "awd_qty", "wrh_us_inbound": "wrh_qty", "order_us": "order_qty"}  # имена из ручной выгрузки
+
+
+def service_account_info() -> dict | None:
+    """Ключ сервисного аккаунта из GOOGLE_SERVICE_ACCOUNT_JSON (json или base64 от json).
+
+    Так ключ приходит из Streamlit Secrets и GitHub Secrets, где файла нет."""
+    raw = (os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON") or "").strip()
+    if not raw:
+        return None
+    if not raw.startswith("{"):
+        raw = base64.b64decode(raw).decode("utf-8")
+    info = json.loads(raw)
+    if info.get("type") != "service_account" or not info.get("private_key"):
+        raise RuntimeError("GOOGLE_SERVICE_ACCOUNT_JSON: это не ключ сервисного аккаунта (нет type/private_key)")
+    return info
+
+
+def _bq_query(sql: str) -> pd.DataFrame:
+    from google.cloud import bigquery
+
+    info = service_account_info()
+    if info:
+        from google.oauth2 import service_account
+
+        creds = service_account.Credentials.from_service_account_info(
+            info, scopes=["https://www.googleapis.com/auth/bigquery"])
+        client = bigquery.Client(project=os.getenv("BQ_PROJECT", BQ_DEFAULT_PROJECT), credentials=creds)
+    else:
+        client = bigquery.Client(project=os.getenv("BQ_PROJECT", BQ_DEFAULT_PROJECT))
+    return client.query(sql).to_dataframe()
+
+
+def _project() -> str:
+    return os.getenv("BQ_PROJECT", BQ_DEFAULT_PROJECT)
+
+
+def _clean_header(values: list) -> list[str]:
+    """Пустые и повторяющиеся заголовки получают уникальные имена, первое вхождение остаётся как есть."""
+    seen: dict[str, int] = {}
+    out = []
+    for i, h in enumerate(values):
+        name = "" if h is None or (isinstance(h, float) and math.isnan(h)) else str(h).strip()
+        if name in seen or not name:
+            seen[name] = seen.get(name, 0) + 1
+            name = f"{name}__{i}"
+        else:
+            seen[name] = 1
+        out.append(name)
+    return out
+
+
+def _rows_to_df(values: list[list]) -> pd.DataFrame:
+    if not values:
+        return pd.DataFrame()
+    header = _clean_header(values[0])
+    width = len(header)
+    body = [(row + [""] * width)[:width] for row in values[1:]]
+    return pd.DataFrame(body, columns=header)
+
+
+def _bq_frame_to_rows(df: pd.DataFrame) -> list[list]:
+    return df.astype(object).where(df.notna(), "").values.tolist()
+
+
+def _csv(path: str) -> pd.DataFrame:
+    return pd.read_csv(path, dtype=str, keep_default_na=False)
+
+
+def _gspread_tab(spec: str, tab: str, rng: str | None, credentials_file: str | None) -> pd.DataFrame:
+    import gspread
+
+    creds = credentials_file or os.getenv("GOOGLE_CREDENTIALS_FILE")
+    info = None if creds else service_account_info()
+    if creds:
+        client = gspread.service_account(filename=creds)
+    elif info:
+        client = gspread.service_account_from_dict(
+            info, scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"])
+    else:  # Cloud Shell / Cloud Run: берём учётные данные окружения (gcloud auth application-default login)
+        try:
+            import google.auth
+
+            adc, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"])
+            client = gspread.authorize(adc)
+        except Exception as exc:
+            raise RuntimeError("Для чтения Google Sheets нужен GOOGLE_CREDENTIALS_FILE (json сервисного аккаунта), GOOGLE_SERVICE_ACCOUNT_JSON "
+                               f"или учётные данные окружения (gcloud auth application-default login): {exc}") from exc
+    ws = client.open_by_key(spec[len("sheet:"):]).worksheet(tab)
+    values = ws.get(rng, value_render_option="UNFORMATTED_VALUE") if rng else ws.get(value_render_option="UNFORMATTED_VALUE")
+    return _rows_to_df(values)
+
+
+def load_hopted(spec: str, credentials_file: str | None = None) -> pd.DataFrame:
+    if spec.startswith("sheet:"):
+        return _gspread_tab(spec, HOPTED_TAB, HOPTED_RANGE, credentials_file)
+    if spec.lower() == "bq":
+        rows = _bq_frame_to_rows(_bq_query(HOPTED_SQL.format(project=_project())))
+        start = next((i for i, r in enumerate(rows) if str(r[0]).strip() == "Hopted ID"), None)
+        if start is None:
+            raise ValueError("В mt.hopted_us_native не нашёл строку заголовков (первая колонка «Hopted ID»)")
+        return _rows_to_df(rows[start:])
+    return _csv(spec)
+
+
+def load_reference(spec: str | None) -> pd.DataFrame | None:
+    if not spec:
+        return None
+    if spec.lower() == "bq":
+        return _bq_query(REFERENCE_SQL.format(project=_project()))
+    return _csv(spec)
+
+
+def _sources_from_bq_rows(rows: list[list]) -> pd.DataFrame:
+    """Лист остатков: заголовки в строке, где col_A = «ASIN»; данные — строки с ASIN формата B0XXXXXXXX."""
+    head_i = next((i for i, r in enumerate(rows) if str(r[0]).strip() == "ASIN"), None)
+    if head_i is None:
+        raise ValueError("В mt.amazon_starting_balance_native не нашёл строку заголовков (колонка A = «ASIN»)")
+    header = [str(h).strip() for h in rows[head_i]]
+    idx = {}
+    for key, title in SOURCES_HEADERS.items():
+        if title not in header:
+            raise ValueError(f"В листе остатков нет колонки «{title}» — формат листа изменился")
+        idx[key] = header.index(title)
+    out = []
+    for r in rows[head_i + 1:]:
+        asin = str(r[0]).strip().upper()
+        if len(asin) == 10 and asin[0] == "B" and asin.isalnum():
+            out.append({"asin": asin, **{k: r[i] for k, i in idx.items()}})
+    return pd.DataFrame(out)
+
+
+def load_sources(spec: str | None) -> pd.DataFrame | None:
+    """Остатки на AWD (awd_qty), складе США с inbound (wrh_qty) и заказы в производстве (order_qty) по ASIN."""
+    if not spec or (spec.lower() != "bq" and not Path(spec).exists()):
+        return None
+    if spec.lower() == "bq":
+        return _sources_from_bq_rows(_bq_frame_to_rows(_bq_query(SOURCES_SQL.format(project=_project()))))
+    df = _csv(spec)
+    return df.rename(columns={c: SOURCES_ALIASES.get(str(c).strip().lower(), c) for c in df.columns})
+
+
+def load_incoming(spec: str | None) -> pd.DataFrame | None:
+    """Приходы по месяцам из планировщика → строки партий (eta = конец месяца, destination AMZ)."""
+    if not spec or (spec.lower() != "bq" and not Path(spec).exists()):
+        return None
+    raw = _bq_query(INCOMING_SQL.format(project=_project())) if spec.lower() == "bq" else _csv(spec)
+    if raw.empty:
+        return None
+    month_end = pd.to_datetime(raw["month"]) + pd.offsets.MonthEnd(0)
+    return pd.DataFrame({
+        "asin": raw["asin"].astype(str), "qty": raw["incoming"],
+        "eta": month_end.dt.strftime("%d.%m.%Y"), "destination": "AMZ",
+    })
+
+
+def load_shipments(spec: str | None, credentials_file: str | None = None) -> pd.DataFrame | None:
+    if not spec:
+        return None
+    if spec.startswith("sheet:"):
+        return _gspread_tab(spec, SHIPMENTS_TAB, None, credentials_file)
+    return _csv(spec) if Path(spec).exists() else None
+
+
+def _optional_csv(path: str | None) -> pd.DataFrame | None:
+    if not path or not Path(path).exists():
+        return None
+    return _csv(path)
+
+
+def _hopted_date(raw: pd.DataFrame):
+    try:
+        return calc.prepare_hopted(raw)["snapshot"].max()
+    except Exception:
+        return pd.NaT
+
+
+def build_meta(data: dict, specs: dict, stats: dict | None) -> list[dict]:
+    """Описание источников для вкладки «Источники»: откуда, для чего, сколько строк, на какую дату."""
+    snap = _hopted_date(data["hopted"])
+    age = (pd.Timestamp.today().normalize() - snap).days if pd.notna(snap) else None
+    rows = [{
+        "Источник": "Hopted, остатки и продажи FBA (США)", "Откуда": specs["hopted"],
+        "Для чего": "Сток на FBA, едущее на FBA (inbound), продажи за 7 и 30 дней", "Строк": len(data["hopted"]),
+        "Данные на": "" if pd.isna(snap) else f"{snap:%d.%m.%Y}",
+        "Статус": "устарел" if age is not None and age > 7 else "ок",
+    }]
+    ref = data["reference"]
+    rows.append({
+        "Источник": "Справочник ASIN (dim_product + план месяца)", "Откуда": specs["reference"] or "—",
+        "Для чего": "Группа, цвет, размер, признак активного ASIN в США, плановая скорость",
+        "Строк": 0 if ref is None else len(ref), "Данные на": "", "Статус": "нет" if ref is None else "ок",
+    })
+    src = data["sources"]
+    awd = wrh = None
+    if src is not None:
+        prep = calc.prepare_sources(src)
+        awd, wrh = prep["awd_qty"].sum(), prep["wrh_qty"].sum()
+    rows.append({
+        "Источник": "Остатки AWD и склада США, заказы в производстве", "Откуда": specs["sources"] or "—",
+        "Для чего": "Можно ли пополнить с AWD или склада; есть ли что отправлять морем или воздухом" + (
+            "" if awd is None else f" (сейчас: AWD {awd:,.0f} шт., склад {wrh:,.0f} шт.)".replace(",", " ")),
+        "Строк": 0 if src is None else len(src), "Данные на": "ночное обновление" if specs["sources"] == "bq" else "",
+        "Статус": "нет" if src is None else "ок",
+    })
+    inc = data["incoming"]
+    rows.append({
+        "Источник": "Приходы из планировщика (по месяцам)", "Откуда": specs["incoming"] or "—",
+        "Для чего": "Когда придёт новый товар; только по месяцам и по всем направлениям сразу (AWD, склад, FBA)",
+        "Строк": 0 if inc is None else len(inc), "Данные на": "", "Статус": "нет" if inc is None else "ок",
+    })
+    bat = data["batches"]
+    rows.append({
+        "Источник": "Партии Orders-Stock (с датами приёмки)", "Откуда": specs["batches"] or "—",
+        "Для чего": "Точные даты прихода партий на FBA", "Строк": 0 if bat is None else len(bat),
+        "Данные на": "", "Статус": "нет" if bat is None else "ок",
+    })
+    ship = data["shipments"]
+    rows.append({
+        "Источник": "Отправки (Logistics Dashboard, calc_shipments)", "Откуда": specs["shipments"] or "—",
+        "Для чего": "Фактические сроки доставки по способам",
+        "Строк": 0 if ship is None else len(ship),
+        "Данные на": "" if not stats else f"отправки с {stats['etd_min']:%d.%m.%Y} по {stats['etd_max']:%d.%m.%Y}",
+        "Статус": "нет" if ship is None else "ок",
+    })
+    return rows
+
+
+def load_all(env: dict | None = None, credentials_file: str | None = None) -> dict:
+    import transit
+
+    env = env if env is not None else os.environ
+    specs = {
+        "hopted": env.get("HOPTED_SOURCE", "demo/hopted_us.csv"),
+        "reference": env.get("REFERENCE_SOURCE", "demo/reference.csv"),
+        "sources": env.get("SOURCES_SOURCE") or env.get("SOURCES_CSV", "demo/sources.csv"),
+        "batches": env.get("BATCHES_CSV", "demo/batches.csv"),
+        "incoming": env.get("INCOMING_SOURCE", ""),
+        "shipments": env.get("SHIPMENTS_SOURCE", ""),
+    }
+    data = {
+        "hopted": load_hopted(specs["hopted"], credentials_file),
+        "reference": load_reference(specs["reference"]),
+        "sources": load_sources(specs["sources"]),
+        "batches": _optional_csv(specs["batches"]),
+        "incoming": load_incoming(specs["incoming"]),
+        "shipments": load_shipments(specs["shipments"], credentials_file),
+        "loaded_at": datetime.now(),
+        "hopted_spec": specs["hopted"],
+        "reference_spec": specs["reference"],
+    }
+    data["transit"] = transit.transit_stats(data["shipments"])
+    data["meta"] = build_meta(data, specs, data["transit"])
+    return data
