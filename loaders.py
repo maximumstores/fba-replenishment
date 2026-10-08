@@ -556,3 +556,42 @@ def warehouse_block_items(spec: str, credentials_file: str | None = None) -> dic
         label = names[col] if col < len(names) and names[col] else f"блок {col}"
         out[label] = {str(r[col]).strip().upper(): _num(r[col + 1]) for r in rows if len(r) > col + 1 and _asin_like(r[col])}
     return out
+
+
+def velocity_by_market(spec: str, credentials_file: str | None = None) -> pd.DataFrame:
+    """Вкладка «today velocity» файла Сергея: скорость продаж по ASIN и рынкам (Market Place)."""
+    book = _gspread_book(spec, credentials_file)
+    ws = next((w for w in book.worksheets() if w.title.strip().lower() == "today velocity"), None)
+    if ws is None:
+        raise ValueError("Не нашёл вкладку «today velocity»")
+    rows = ws.get(value_render_option="UNFORMATTED_VALUE")
+    head = next((i for i, r in enumerate(rows[:10]) if "asin" in [str(c).strip().lower() for c in r]), None)
+    if head is None:
+        raise ValueError("На вкладке «today velocity» нет шапки с ASIN")
+    low = [str(c).strip().lower() for c in rows[head]]
+    ia, ivel = low.index("asin"), low.index("velocity")
+    im = next(i for i, c in enumerate(low) if c.startswith("market"))
+    out = [{"asin": str(r[ia]).strip().upper(), "market": str(r[im]).strip().upper(), "velocity": _num(r[ivel])}
+           for r in rows[head + 1:] if len(r) > max(ia, ivel, im) and _asin_like(r[ia])]
+    df = pd.DataFrame(out)
+    return df.groupby(["asin", "market"], as_index=False)["velocity"].sum() if not df.empty else df
+
+
+def block_market_shares(blocks: dict[str, dict[str, float]], vel: pd.DataFrame) -> pd.DataFrame:
+    """Для каждого склада: доля продаж его ASIN по рынкам, взвешенная остатком (сумма по рынкам = 100%)."""
+    if vel.empty:
+        return pd.DataFrame()
+    piv = vel.pivot_table(index="asin", columns="market", values="velocity", aggfunc="sum", fill_value=0.0)
+    share = piv.div(piv.sum(axis=1).replace(0, float("nan")), axis=0)
+    rows = []
+    for label, items in blocks.items():
+        stock = pd.Series({a: q for a, q in items.items() if q > 0})
+        both = share.index.intersection(stock.index)
+        if len(both) == 0:
+            rows.append({"Склад": label, "ASIN с продажами": 0})
+            continue
+        w = stock[both]
+        sh = share.loc[both].mul(w, axis=0).sum() / w[share.loc[both].notna().any(axis=1)].sum()
+        rows.append({"Склад": label, "ASIN с продажами": len(both),
+                     **{f"доля {m}, %": round(100 * float(v)) for m, v in sh.sort_values(ascending=False).head(5).items()}})
+    return pd.DataFrame(rows)

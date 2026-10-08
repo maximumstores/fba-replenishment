@@ -175,3 +175,11 @@ def test_live_warehouse_empty_is_not_applied():
     snap = pd.DataFrame({"asin": ["B000000001"], "awd_qty": [1], "wrh_qty": [900], "order_qty": [0], "fba_stock_transit": [0]})
     out, note = loaders.apply_live_wrh(snap, pd.DataFrame({"asin": [], "wrh_live": []}))
     assert out is snap and "не применён" in note
+
+
+def test_block_market_shares_separates_markets():
+    import loaders
+    vel = pd.DataFrame({"asin": ["B0A", "B0A", "B0B", "B0B"], "market": ["US", "DE", "US", "DE"], "velocity": [9.0, 1.0, 2.0, 8.0]})
+    blocks = {"FF box TX": {"B0A": 100.0, "B0B": 0.0}, "FFBox DE": {"B0A": 0.0, "B0B": 50.0}}
+    res = loaders.block_market_shares(blocks, vel).set_index("Склад")
+    assert res.loc["FF box TX", "доля US, %"] == 90 and res.loc["FFBox DE", "доля DE, %"] == 80

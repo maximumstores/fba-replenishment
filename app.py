@@ -337,6 +337,12 @@ def show_warehouse_check(report: pd.DataFrame | None = None) -> None:
                              "Штук всего": round(units), "Штук по ASIN из US, %": round(100 * in_us / max(units, 1))})
             st.write("Если у CA доли как у FL и TX — склад американский; если как у DE — нет:")
             st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+        try:
+            shares = loaders.block_market_shares(blocks, loaders.velocity_by_market(spec))
+            st.write("Куда продаются ASIN каждого склада (доля скорости продаж по рынкам, взвешено остатком):")
+            st.dataframe(shares, hide_index=True, use_container_width=True)
+        except Exception as exc:
+            st.warning(f"Продажи по рынкам не прочитал: {type(exc).__name__}: {exc}")
 
 
 def show_usage() -> None:
