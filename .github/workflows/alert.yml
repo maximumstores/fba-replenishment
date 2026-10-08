@@ -2,7 +2,7 @@ name: FBA alert (US)
 
 on:
   schedule:
-    - cron: "0 6 * * *"   # 06:00 UTC = 09:00 Киев (летом)/08:00 (зимой)
+    - cron: "0 6 * * 1"   # понедельник 06:00 UTC = 09:00 Киев (летом)/08:00 (зимой)
   workflow_dispatch: {}
 
 permissions:
@@ -32,7 +32,11 @@ jobs:
           BQ_PROJECT: reorder-497714
           USE_PLANNER_INCOMING: "false"
           PLAN_MODE: "off"
-        run: python alert.py
+          BATCHES_CSV: ""
+          AWD_LIVE_SOURCE: sheet:1acpHlfBiJjFm96VmFksRmKTnktULTgmu7iESYFDLUZw
+          WAREHOUSE_LIVE_SOURCE: sheet:1acpHlfBiJjFm96VmFksRmKTnktULTgmu7iESYFDLUZw
+          WAREHOUSE_EXCLUDE: DE
+        run: python alert.py --always
       - name: Save alert state
         run: |
           git config user.name "fba-alert-bot"
