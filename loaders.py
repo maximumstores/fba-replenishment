@@ -595,3 +595,36 @@ def block_market_shares(blocks: dict[str, dict[str, float]], vel: pd.DataFrame) 
         rows.append({"Склад": label, "ASIN с продажами": len(both),
                      **{f"доля {m}, %": round(100 * float(v)) for m, v in sh.sort_values(ascending=False).head(5).items()}})
     return pd.DataFrame(rows)
+
+
+CA_HINT_TABS = ["Fulfillment-BOX CA", "Fulfillment-BOX TX", "Fulfillment-BOX FL", "Fulfillment-BOX DE", "pivot Warehouses FFbox",
+                "International Link Logistics 3pl", "sumac3pl(arhive)", "All stock at warehouses", "Pivot Table warehouse", "Scorecard"]
+CA_HINT_WORDS = ("canada", "canad", "toronto", "ontario", "vancouver", "calgary", "mississauga", "montreal", "california",
+                 "calif", "los angeles", "ontario, ca", "usa", "united states", "amazon.ca", " cad", "can ")
+
+
+def find_hints(spec: str, tabs: list[str] | None = None, words: tuple[str, ...] = CA_HINT_WORDS,
+               credentials_file: str | None = None, rows: int = 400) -> dict:
+    """Ищет слова-подсказки (страны, города) в вкладках одним batch-запросом; возвращает совпадения и шапку вкладок."""
+    book = _gspread_book(spec, credentials_file)
+    titles = [w.title for w in book.worksheets()]
+    use = [t for t in (tabs or CA_HINT_TABS) if t in titles]
+    ranges = [f"'{t}'!A1:AZ{rows}" for t in use]
+    resp = book.values_batch_get(ranges, params={"valueRenderOption": "FORMATTED_VALUE"}) if ranges else {"valueRanges": []}
+    found, heads = [], {}
+    for t, vr in zip(use, resp.get("valueRanges", [])):
+        vals = vr.get("values", [])
+        heads[t] = [[str(c).replace("\n", " ")[:20] for c in r[:12]] for r in vals[:3]]
+        for ri, r in enumerate(vals):
+            for ci, c in enumerate(r):
+                low = str(c).lower()
+                hit = next((w for w in words if w in low), None)
+                if hit and not (len(low) == 10 and low[:2] == "b0"):
+                    found.append({"tab": t, "cell": f"R{ri + 1}C{ci + 1}", "word": hit, "text": str(c)[:80]})
+        if len(found) > 400:
+            break
+    counts: dict[str, dict[str, int]] = {}
+    for f in found:
+        counts.setdefault(f["tab"], {}).setdefault(f["word"], 0)
+        counts[f["tab"]][f["word"]] += 1
+    return {"tabs_read": use, "counts": counts, "samples": found[:40], "heads": heads}
