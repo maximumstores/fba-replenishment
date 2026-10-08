@@ -53,6 +53,30 @@ def _bridge_secrets() -> None:
 
 _bridge_secrets()
 st.set_page_config(page_title="FBA США: пополнение", layout="wide")
+def _require_login() -> None:
+    """Вход через Google только для сотрудников домена. Включается, когда в Secrets есть раздел [auth]."""
+    try:
+        enabled = "auth" in st.secrets
+    except Exception:
+        enabled = False
+    if not enabled:
+        return
+    if not st.user.is_logged_in:
+        st.title("FBA США: что пополнять")
+        st.info("Вход только для сотрудников компании (аккаунт Google).")
+        st.button("Войти через Google", on_click=st.login, type="primary")
+        st.stop()
+    domain = os.getenv("ALLOWED_EMAIL_DOMAIN", "maximumstores.online").strip().lower()
+    email = str(st.user.get("email", "")).strip().lower()
+    if not (email.endswith("@" + domain) and st.user.get("email_verified", True)):
+        st.error(f"Доступ только для адресов @{domain}. Вы вошли как {email or 'неизвестный аккаунт'}.")
+        st.button("Выйти", on_click=st.logout)
+        st.stop()
+    st.sidebar.caption(f"Вы вошли: {email}")
+    st.sidebar.button("Выйти", on_click=st.logout)
+
+
+_require_login()
 if not os.getenv("HOPTED_SOURCE"):
     st.warning(
         "Сейчас показаны ДЕМО-данные: переменная HOPTED_SOURCE не задана. "
