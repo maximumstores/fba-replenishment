@@ -256,6 +256,31 @@ def load_usage_logs() -> dict:
     return usage.load_logs()
 
 
+def show_restock_diag(data: dict) -> None:
+    """Админская диагностика: что лежит во вкладке Restock файла Сергея и как это соотносится со снимком склада."""
+    with st.expander("Диагностика: склад из Restock (файл Сергея)"):
+        spec = os.getenv("AWD_LIVE_SOURCE", "")
+        if not spec.startswith("sheet:"):
+            st.info("AWD_LIVE_SOURCE не задан, нечего читать.")
+            return
+        if not st.button("Прочитать Restock", key="restock_diag_btn"):
+            return
+        try:
+            d = loaders.restock_diagnostics(spec)
+        except Exception as exc:
+            st.error(f"{type(exc).__name__}: {exc}")
+            return
+        st.write(f"Строк на вкладке: {d['rows']}; строк с ASIN: {d['asin_rows']}; уникальных ASIN: {d['asin_unique']}")
+        st.write("Шапка:", d["header"])
+        st.write("Суммы колонок:", d["sums"])
+        st.write("Строк по аккаунтам:", d["accounts"])
+        st.write("Первые строки:", d["sample"])
+        src = data.get("sources")
+        if src is not None:
+            wrh = pd.to_numeric(src["wrh_qty"], errors="coerce").fillna(0).sum()
+            st.write(f"Для сравнения, склад в снимке на начало месяца (WRH US+ Inbound): {wrh:,.0f} шт., ASIN: {len(src)}".replace(",", " "))
+
+
 def show_usage() -> None:
     st.subheader("Активность дашборда")
     st.caption("Время киевское. Регулярность — среднее по сотрудникам доля рабочих дней с входом; это число идёт в Scorecard.")
@@ -454,6 +479,7 @@ def main() -> None:
     if tab_usage is not None:
         with tab_usage:
             show_usage()
+            show_restock_diag(data)
 
 
 main()

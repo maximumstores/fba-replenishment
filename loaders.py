@@ -398,3 +398,23 @@ def load_all(env: dict | None = None, credentials_file: str | None = None) -> di
     data["transit"] = transit.transit_stats(data["shipments"])
     data["meta"] = build_meta(data, specs, data["transit"])
     return data
+
+
+def restock_diagnostics(spec: str, credentials_file: str | None = None) -> dict:
+    """Диагностика вкладки Restock: шапка, число ASIN, суммы колонок SUM/MAX/Plan, строки по аккаунтам, первые строки."""
+    rows = _gspread_values(spec, "Restock", None, credentials_file)
+    if not rows:
+        raise ValueError("Вкладка Restock пуста")
+    head = [str(h) for h in rows[0]]
+    ia = next((i for i, h in enumerate(head) if h.strip().upper() == "ASIN"), None)
+    if ia is None:
+        raise ValueError("На вкладке Restock нет колонки ASIN в первой строке")
+    data = [r for r in rows[1:] if len(r) > ia and str(r[ia]).strip().upper().startswith("B0") and len(str(r[ia]).strip()) == 10]
+    sums = {f"[{i}] {h}": round(sum(_num(r[i]) for r in data if len(r) > i))
+            for i, h in enumerate(head) if i != ia and h.startswith(("SUM", "MAX", "Plan"))}
+    accounts: dict[str, int] = {}
+    for r in data:
+        accounts[str(r[0])] = accounts.get(str(r[0]), 0) + 1
+    return {"rows": len(rows), "header": head, "asin_rows": len(data), "asin_unique": len({str(r[ia]).strip() for r in data}),
+            "sums": sums, "accounts": dict(sorted(accounts.items(), key=lambda kv: -kv[1])[:12]),
+            "sample": [[str(c) for c in r] for r in data[:3]]}
