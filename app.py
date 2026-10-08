@@ -289,6 +289,28 @@ def show_restock_diag(data: dict, report: pd.DataFrame | None = None) -> None:
             st.write(f"Для сравнения, склад в снимке на начало месяца (WRH US+ Inbound): {wrh:,.0f} шт., ASIN: {len(src)}".replace(",", " "))
 
 
+def show_workbook_scan() -> None:
+    """Админский обзор вкладок файла Сергея: понять, где лежит склад США."""
+    with st.expander("Диагностика: обзор всех вкладок файла Сергея"):
+        spec = os.getenv("AWD_LIVE_SOURCE", "")
+        names = st.text_input("Только эти вкладки (через ; ) — пусто = все", "", key="scan_only")
+        if not spec.startswith("sheet:") or not st.button("Просмотреть вкладки", key="scan_btn"):
+            return
+        only = [n.strip() for n in names.split(";") if n.strip()] or None
+        try:
+            res = loaders.scan_workbook(spec, only=only)
+        except Exception as exc:
+            st.error(f"{type(exc).__name__}: {exc}")
+            return
+        for t in res:
+            if "error" in t:
+                st.write(f"**{t['tab']}**: не прочитал ({t['error']})")
+                continue
+            st.write(f"**{t['tab']}** — {t['rows_total']}×{t['cols_total']}, колонки с ASIN в первых 60 строках: {t['asin_cols'] or 'нет'}")
+            if t["asin_cols"]:
+                st.caption(" / ".join(" | ".join(r) for r in t["head"]))
+
+
 def show_usage() -> None:
     st.subheader("Активность дашборда")
     st.caption("Время киевское. Регулярность — среднее по сотрудникам доля рабочих дней с входом; это число идёт в Scorecard.")
@@ -488,6 +510,7 @@ def main() -> None:
         with tab_usage:
             show_usage()
             show_restock_diag(data, report)
+            show_workbook_scan()
 
 
 main()

@@ -420,3 +420,40 @@ def restock_diagnostics(spec: str, credentials_file: str | None = None) -> dict:
                        "wrh": _num(r[9]) if len(r) > 9 else 0.0, "awd": _num(r[10]) if len(r) > 10 else 0.0} for r in data],
             "sums": sums, "accounts": dict(sorted(accounts.items(), key=lambda kv: -kv[1])[:12]),
             "sample": [[str(c) for c in r] for r in data[:3]]}
+
+
+def _gspread_book(spec: str, credentials_file: str | None = None):
+    import gspread
+
+    info = service_account_info()
+    creds = credentials_file or os.getenv("GOOGLE_CREDENTIALS_FILE")
+    if creds:
+        client = gspread.service_account(filename=creds)
+    elif info:
+        client = gspread.service_account_from_dict(info, scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"])
+    else:
+        raise RuntimeError("Нет ключа сервисного аккаунта")
+    return client.open_by_key(spec[len("sheet:"):])
+
+
+def scan_workbook(spec: str, credentials_file: str | None = None, only: list[str] | None = None) -> list[dict]:
+    """Обзор вкладок книги: размер, число ASIN-подобных ячеек, колонки с ASIN и первые строки (обрезаны). Только чтение."""
+    out = []
+    for ws in _gspread_book(spec, credentials_file).worksheets():
+        if only and ws.title not in only:
+            continue
+        try:
+            rows = ws.get("A1:AZ60", value_render_option="FORMATTED_VALUE")
+        except Exception as exc:
+            out.append({"tab": ws.title, "error": f"{type(exc).__name__}"})
+            continue
+        asin_cols: dict[int, int] = {}
+        for r in rows:
+            for i, c in enumerate(r):
+                v = str(c).strip().upper()
+                if len(v) == 10 and v[0] == "B" and v[1] == "0" and v.isalnum():
+                    asin_cols[i] = asin_cols.get(i, 0) + 1
+        out.append({"tab": ws.title, "rows_total": ws.row_count, "cols_total": ws.col_count,
+                    "asin_cols": {k: v for k, v in sorted(asin_cols.items())},
+                    "head": [[str(c).replace("\n", " ")[:18] for c in r[:16]] for r in rows[:5]]})
+    return out
