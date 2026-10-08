@@ -313,7 +313,7 @@ def show_workbook_scan() -> None:
                 st.caption(" / ".join(" | ".join(r) for r in t["head"]))
 
 
-def show_warehouse_check() -> None:
+def show_warehouse_check(report: pd.DataFrame | None = None) -> None:
     """Админская проверка сводных вкладок склада в файле Сергея."""
     with st.expander("Диагностика: сводные вкладки склада"):
         spec = os.getenv("AWD_LIVE_SOURCE", "")
@@ -321,8 +321,22 @@ def show_warehouse_check() -> None:
             return
         try:
             st.json(loaders.warehouse_pivots_check(spec))
+            blocks = loaders.warehouse_block_items(spec)
         except Exception as exc:
             st.error(f"{type(exc).__name__}: {exc}")
+            return
+        if report is not None:
+            us = set(report["asin"].astype(str).str.upper())
+            rows = []
+            for label, items in blocks.items():
+                pos = {a: q for a, q in items.items() if q > 0}
+                units = sum(pos.values())
+                in_us = sum(q for a, q in pos.items() if a in us)
+                rows.append({"Склад": label, "ASIN с остатком": len(pos),
+                             "из них продаются на Amazon US, %": round(100 * sum(1 for a in pos if a in us) / max(len(pos), 1)),
+                             "Штук всего": round(units), "Штук по ASIN из US, %": round(100 * in_us / max(units, 1))})
+            st.write("Если у CA доли как у FL и TX — склад американский; если как у DE — нет:")
+            st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
 
 
 def show_usage() -> None:
@@ -525,7 +539,7 @@ def main() -> None:
             show_usage()
             show_restock_diag(data, report)
             show_workbook_scan()
-            show_warehouse_check()
+            show_warehouse_check(report)
 
 
 main()

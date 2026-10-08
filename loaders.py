@@ -545,3 +545,14 @@ def apply_live_wrh(sources: pd.DataFrame | None, live: pd.DataFrame) -> tuple[pd
     return m.drop(columns="wrh_live"), (
         f"Склад взят из сводки склада (без DE): {live_sum:,.0f} шт. В снимке на начало месяца было {old_sum:,.0f} шт. "
         "(там к складу добавлен inbound).").replace(",", " ")
+
+
+def warehouse_block_items(spec: str, credentials_file: str | None = None) -> dict[str, dict[str, float]]:
+    """Остатки по ASIN в каждом блоке pivot Warehouses FFbox: {метка блока: {asin: qty}}."""
+    rows = _gspread_book(spec, credentials_file).worksheet(WAREHOUSE_BLOCKS_TAB).get(value_render_option="UNFORMATTED_VALUE")
+    names = [str(c).strip() for c in rows[0]] if rows else []
+    out: dict[str, dict[str, float]] = {}
+    for col in (0, 3, 6, 9):
+        label = names[col] if col < len(names) and names[col] else f"блок {col}"
+        out[label] = {str(r[col]).strip().upper(): _num(r[col + 1]) for r in rows if len(r) > col + 1 and _asin_like(r[col])}
+    return out
