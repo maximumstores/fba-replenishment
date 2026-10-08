@@ -256,7 +256,7 @@ def load_usage_logs() -> dict:
     return usage.load_logs()
 
 
-def show_restock_diag(data: dict) -> None:
+def show_restock_diag(data: dict, report: pd.DataFrame | None = None) -> None:
     """Админская диагностика: что лежит во вкладке Restock файла Сергея и как это соотносится со снимком склада."""
     with st.expander("Диагностика: склад из Restock (файл Сергея)"):
         spec = os.getenv("AWD_LIVE_SOURCE", "")
@@ -275,6 +275,14 @@ def show_restock_diag(data: dict) -> None:
         st.write("Суммы колонок:", d["sums"])
         st.write("Строк по аккаунтам:", d["accounts"])
         st.write("Первые строки:", d["sample"])
+        if report is not None and d.get("items"):
+            mine = report.groupby("asin", as_index=False).agg(
+                status=("status_ru", "first"), qty_need=("qty_need", "sum"), awd_qty=("awd_qty", "max"), wrh_qty=("wrh_qty", "max"))
+            cmp_ = pd.DataFrame(d["items"]).merge(mine, on="asin", how="left").rename(columns={
+                "restock": "Restock Сергея", "wrh": "WRH у Сергея", "awd": "AWD у Сергея",
+                "status": "Статус у нас", "qty_need": "Слать у нас", "awd_qty": "AWD у нас", "wrh_qty": "Склад у нас"})
+            st.write("Список Сергея против расчёта дашборда (по этим ASIN):")
+            st.dataframe(cmp_, hide_index=True, use_container_width=True)
         src = data.get("sources")
         if src is not None:
             wrh = pd.to_numeric(src["wrh_qty"], errors="coerce").fillna(0).sum()
@@ -479,7 +487,7 @@ def main() -> None:
     if tab_usage is not None:
         with tab_usage:
             show_usage()
-            show_restock_diag(data)
+            show_restock_diag(data, report)
 
 
 main()

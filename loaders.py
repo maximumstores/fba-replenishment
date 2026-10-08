@@ -416,5 +416,7 @@ def restock_diagnostics(spec: str, credentials_file: str | None = None) -> dict:
     for r in data:
         accounts[str(r[0])] = accounts.get(str(r[0]), 0) + 1
     return {"rows": len(rows), "header": head, "asin_rows": len(data), "asin_unique": len({str(r[ia]).strip() for r in data}),
+            "items": [{"asin": str(r[ia]).strip().upper(), "restock": _num(r[8]) if len(r) > 8 else 0.0,
+                       "wrh": _num(r[9]) if len(r) > 9 else 0.0, "awd": _num(r[10]) if len(r) > 10 else 0.0} for r in data],
             "sums": sums, "accounts": dict(sorted(accounts.items(), key=lambda kv: -kv[1])[:12]),
             "sample": [[str(c) for c in r] for r in data[:3]]}
