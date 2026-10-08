@@ -14,6 +14,7 @@ import streamlit as st
 import calc
 import loaders
 import transit
+import usage
 from config import CHANNEL_RU, Settings
 
 try:
@@ -63,7 +64,8 @@ def _require_login() -> None:
         return
     if not st.user.is_logged_in:
         st.title("FBA США: что пополнять")
-        st.info("Вход только для сотрудников компании (аккаунт Google).")
+        domain_txt = os.getenv("ALLOWED_EMAIL_DOMAIN", "maximumstores.online").strip().lower()
+        st.info(f"Вход только для сотрудников компании: аккаунт Google на домене **@{domain_txt}**.")
         st.button("Войти через Google", on_click=st.login, type="primary")
         st.stop()
     domain = os.getenv("ALLOWED_EMAIL_DOMAIN", "maximumstores.online").strip().lower()
@@ -211,6 +213,102 @@ def show_sources(data: dict, settings: Settings, use_incoming: bool) -> None:
         st.write(f"• {item}")
 
 
+ADMIN_EMAILS = {e.strip().lower() for e in os.getenv(
+    "ADMIN_EMAILS", "v.tereshyn@maximumstores.online,s.yaremenko@maximumstores.online").split(",") if e.strip()}
+SECTIONS = ["Что пополнять (ASIN)", "По группам, цветам, размерам", "Источники", "Качество данных"]
+
+
+def current_email() -> str:
+    """Почта вошедшего сотрудника; без входа через Google (локальный запуск) — пусто, журнал не пишется."""
+    try:
+        if "auth" in st.secrets and st.user.is_logged_in:
+            return str(st.user.get("email", "")).strip().lower()
+    except Exception:
+        pass
+    return ""
+
+
+def _on_section_change() -> None:
+    usage.log_page_view(st.session_state.get("_email", ""), str(st.session_state.get("section", "")))
+
+
+def track_usage(email: str, settings: Settings) -> None:
+    """Вход (один раз за сессию) и правки допущений в боковой панели."""
+    st.session_state["_email"] = email
+    if not email:
+        return
+    if not st.session_state.get("_login_logged"):
+        st.session_state["_login_logged"] = True
+        usage.log_login(email)
+        usage.log_page_view(email, SECTIONS[0])
+    cur = asdict(settings)
+    prev = st.session_state.get("_settings_prev")
+    if prev is not None and prev != cur:
+        changed = ", ".join(f"{k}={cur[k]}" for k in cur if prev.get(k) != cur[k])
+        usage.log_edit(email, f"изменил допущения: {changed}"[:500])
+    st.session_state["_settings_prev"] = cur
+
+
+@st.cache_data(ttl=300, show_spinner="Читаю журнал…")
+def load_usage_logs() -> dict:
+    return usage.load_logs()
+
+
+def show_usage() -> None:
+    st.subheader("Активность дашборда")
+    st.caption("Время киевское. Регулярность — среднее по сотрудникам доля рабочих дней с входом; это число идёт в Scorecard.")
+    period = st.radio("Период", [7, 14, 30, 60], horizontal=True, format_func=lambda d: f"{d} дн.", key="usage_period")
+    if usage.LAST_ERROR.get("write"):
+        st.warning(f"Журнал не пишется: {usage.LAST_ERROR['write']}")
+    try:
+        logs = load_usage_logs()
+    except Exception as exc:
+        st.info(f"Журнал пока недоступен ({type(exc).__name__}). Нужны датасет `{usage.dataset()}` в BigQuery "
+                "и права на запись для сервисного аккаунта (см. README, раздел «Использование»).")
+        return
+    today = pd.Timestamp.now(tz=usage.KYIV).date()
+    cur = usage.regularity(logs["login_log"], today, period)
+    prev = usage.regularity(logs["login_log"], today - pd.Timedelta(days=period).to_pytimedelta(), period)
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Регулярность", f"{cur['pct']:.0f}%", f"{cur['pct'] - prev['pct']:+.0f} п.п. к прошлому периоду")
+    c2.metric("Зашли", f"{cur['came']} из {cur['base']}")
+    c3.metric("В среднем дней с входом", f"{cur['avg_days']:.1f} из {cur['workdays']}")
+
+    st.markdown("**Кто пользуется**")
+    pu = cur["per_user"]
+    if len(pu):
+        view = pu.rename(columns={"email": "Сотрудник", "logins": "Входов", "days": "Рабочих дней с входом",
+                                  "share": "Доля дней", "last": "Последний вход"})
+        view["Последний вход"] = view["Последний вход"].dt.strftime("%d.%m %H:%M")
+        st.dataframe(view, hide_index=True, width="stretch",
+                     column_config={"Доля дней": st.column_config.ProgressColumn(format="percent", min_value=0, max_value=1)})
+    else:
+        st.write("Входов пока нет.")
+
+    start = today - pd.Timedelta(days=period - 1).to_pytimedelta()
+    pv = logs["page_views"]
+    pv = pv[pv["viewed_at"].dt.date >= start]
+    st.markdown("**Какие разделы открывают**")
+    if len(pv):
+        st.dataframe(pv.groupby("section").agg(Открытий=("email", "size"), Сотрудников=("email", "nunique"))
+                     .sort_values("Открытий", ascending=False).reset_index().rename(columns={"section": "Раздел"}),
+                     hide_index=True, width="stretch")
+    else:
+        st.write("Пока нет.")
+    ed = logs["edit_log"]
+    ed = ed[ed["edited_at"].dt.date >= start]
+    st.markdown("**Кто что меняет**")
+    if len(ed):
+        v = ed.sort_values("edited_at", ascending=False).head(50).copy()
+        v["Когда"] = v["edited_at"].dt.strftime("%d.%m %H:%M")
+        st.dataframe(v[["Когда", "email", "action"]].rename(columns={"email": "Сотрудник", "action": "Что"}),
+                     hide_index=True, width="stretch")
+    else:
+        st.write("Правок допущений пока не было.")
+    st.markdown("**% для Scorecard по неделям**")
+    st.dataframe(usage.weekly_scorecard(logs["login_log"], today), hide_index=True, width="stretch")
+
+
 def main() -> None:
     st.title("FBA США: что пополнять")
 
@@ -286,8 +384,13 @@ def main() -> None:
     cols[4].metric("Слать всего, шт", f"{int(flt['qty_need'].sum()):,}".replace(",", " "))
     cols[5].metric("Потери за 30 дн без действий, шт", f"{int(flt['lost_30'].sum()):,}".replace(",", " "))
 
-    tab_asin, tab_group, tab_sources, tab_quality = st.tabs(
-        ["Что пополнять (ASIN)", "По группам, цветам, размерам", "Источники", "Качество данных"])
+    email = current_email()
+    track_usage(email, settings)
+    is_admin = email in ADMIN_EMAILS
+    labels = SECTIONS + (["Использование"] if is_admin else [])
+    tabs = st.tabs(labels, key="section", on_change=_on_section_change)
+    tab_asin, tab_group, tab_sources, tab_quality = tabs[:4]
+    tab_usage = tabs[4] if is_admin else None
 
     with tab_asin:
         st.caption(f"Показано {len(flt)} из {len(report)} строк (ASIN × магазин). Сверху самое срочное.")
@@ -345,6 +448,10 @@ def main() -> None:
             "Дата партий в Orders-Stock — крайний срок приёмки, задержки в ней не видны, поэтому к ETA партии добавляется запас "
             f"({settings.batch_delay_days:.0f} дн.). Поставки в статусе working по умолчанию не считаются приходом."
         )
+
+    if tab_usage is not None:
+        with tab_usage:
+            show_usage()
 
 
 main()

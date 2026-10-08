@@ -97,3 +97,19 @@ streamlit run app.py --server.port 8080 --server.headless true
 1. Сервисный аккаунт **только на чтение** (например `fba-dashboard-ro`): BigQuery Data Viewer + BigQuery Job User на проекте `reorder-497714`, доступ читателя к листу Logistics Dashboard. Ключ json — в Secrets, не в репозиторий.
 2. Streamlit Cloud: New app → репозиторий, ветка `main`, файл `app.py` → Advanced settings → Secrets: содержимое `.streamlit/secrets.toml.example` с реальными значениями. Доступ к приложению — только по приглашению (email).
 3. Алерт: GitHub → Settings → Secrets and variables → Actions: secrets `GOOGLE_SERVICE_ACCOUNT_JSON` (весь json), `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`; variable `DASHBOARD_URL`. Запуск `.github/workflows/alert.yml` ежедневно, состояние алертов коммитится в `state/alert_state.json`.
+
+
+## Использование (Scorecard) — стандарт как в BSR Radar и Kabinet
+
+Работает, когда включён вход через Google (раздел `[auth]` в Secrets). Пишем три журнала в BigQuery, датасет `fba_replenishment`:
+`login_log` (вход), `page_views` (какой раздел открыл), `edit_log` (изменил допущения в боковой панели). Время хранится в UTC, показывается киевским.
+Вкладка «Использование» видна только `ADMIN_EMAILS` (по умолчанию v.tereshyn@ и s.yaremenko@maximumstores.online). Регулярность = среднее по сотрудникам доля рабочих дней периода с входом; сотрудники = все, кто когда-либо заходил. Запись идёт в фоне и не ломает дашборд.
+
+Один раз создать датасет и дать сервисному аккаунту запись только в него (в Cloud Shell):
+
+```bash
+bq --location=EU mk -d --description "FBA replenishment: журналы использования" reorder-497714:fba_replenishment
+bq query --use_legacy_sql=false --location=EU 'GRANT `roles/bigquery.dataEditor` ON SCHEMA `reorder-497714.fba_replenishment` TO "serviceAccount:fba-dashboard-ro@reorder-497714.iam.gserviceaccount.com"'
+```
+
+Выключить запись: `USAGE_LOG=off`. Другой датасет: `USAGE_DATASET`.

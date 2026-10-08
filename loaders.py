@@ -76,19 +76,23 @@ def service_account_info() -> dict | None:
     return info
 
 
-def _bq_query(sql: str) -> pd.DataFrame:
+def bq_client():
+    """Клиент BigQuery: ключ из GOOGLE_SERVICE_ACCOUNT_JSON, иначе учётные данные окружения."""
     from google.cloud import bigquery
 
+    project = os.getenv("BQ_PROJECT", BQ_DEFAULT_PROJECT)
     info = service_account_info()
     if info:
         from google.oauth2 import service_account
 
         creds = service_account.Credentials.from_service_account_info(
             info, scopes=["https://www.googleapis.com/auth/bigquery"])
-        client = bigquery.Client(project=os.getenv("BQ_PROJECT", BQ_DEFAULT_PROJECT), credentials=creds)
-    else:
-        client = bigquery.Client(project=os.getenv("BQ_PROJECT", BQ_DEFAULT_PROJECT))
-    return client.query(sql).to_dataframe()
+        return bigquery.Client(project=project, credentials=creds)
+    return bigquery.Client(project=project)
+
+
+def _bq_query(sql: str) -> pd.DataFrame:
+    return bq_client().query(sql).to_dataframe()
 
 
 def _project() -> str:
