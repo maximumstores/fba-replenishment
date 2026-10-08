@@ -118,3 +118,16 @@ def test_dashboard_renders_sources_tab(monkeypatch):
     assert not at.exception
     subheaders = [s.value for s in at.subheader]
     assert "Откуда данные" in subheaders and "Сроки по каналам: что факт, что допущение" in subheaders
+
+
+def test_shipments_failure_does_not_break_load_all(monkeypatch):
+    env = {"HOPTED_SOURCE": "demo/hopted_us.csv", "REFERENCE_SOURCE": "demo/reference.csv",
+           "SOURCES_SOURCE": "", "SHIPMENTS_SOURCE": "sheet:X"}
+
+    def boom(*a, **k):
+        raise PermissionError
+
+    monkeypatch.setattr(loaders, "load_shipments", boom)
+    data = loaders.load_all(env)
+    assert data["shipments"] is None and data["transit"] is None
+    assert "PermissionError" in data["warnings"][0]

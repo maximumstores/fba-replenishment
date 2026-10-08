@@ -200,6 +200,8 @@ def main() -> None:
         st.info("Проверьте HOPTED_SOURCE / REFERENCE_SOURCE в .env и доступ сервисного аккаунта к файлам (см. README).")
         st.stop()
 
+    for w in data.get("warnings", []):
+        st.warning(w)
     settings, use_incoming = settings_sidebar(data)
     if st.sidebar.button("Обновить данные"):
         get_inputs.clear()

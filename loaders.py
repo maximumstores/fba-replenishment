@@ -298,13 +298,24 @@ def load_all(env: dict | None = None, credentials_file: str | None = None) -> di
         "incoming": env.get("INCOMING_SOURCE", ""),
         "shipments": env.get("SHIPMENTS_SOURCE", ""),
     }
+    warnings: list[str] = []
+    try:
+        shipments = load_shipments(specs["shipments"], credentials_file)
+    except Exception as exc:  # сроки доставки необязательны: без них считаем по допущениям, а не падаем
+        shipments = None
+        who = (service_account_info() or {}).get("client_email", "сервисного аккаунта")
+        warnings.append(
+            f"Фактические сроки доставки не загружены ({type(exc).__name__}). Откройте доступ читателя к листу "
+            f"Logistics Dashboard для {who}; пока срок «Море» берётся из настройки LEAD_SEA."
+        )
     data = {
+        "warnings": warnings,
         "hopted": load_hopted(specs["hopted"], credentials_file),
         "reference": load_reference(specs["reference"]),
         "sources": load_sources(specs["sources"]),
         "batches": _optional_csv(specs["batches"]),
         "incoming": load_incoming(specs["incoming"]),
-        "shipments": load_shipments(specs["shipments"], credentials_file),
+        "shipments": shipments,
         "loaded_at": datetime.now(),
         "hopted_spec": specs["hopted"],
         "reference_spec": specs["reference"],
