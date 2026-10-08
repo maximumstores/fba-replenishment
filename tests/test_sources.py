@@ -153,3 +153,25 @@ def test_awd_live_rejected_when_sum_is_absurd():
     snap = pd.DataFrame({"asin": ["B0AAAAAAA1"], "awd_qty": [1000], "wrh_qty": [0], "order_qty": [0], "fba_stock_transit": [0]})
     out, note = loaders.apply_live_awd(snap, live)
     assert out is snap and "не применён" in note
+
+
+def test_live_warehouse_total_minus_germany_and_applied():
+    import loaders
+    total = [["", "SUM of 74558"], ["Grand Total", 999]] + [[f"B0{i:08d}", 10 + i] for i in range(60)]
+    blocks = [["FFbox CA", "", "", "FFBox DE", "", "", "FF box FL"], ["asin", "SUM of Stock", "", "asin", "SUM of Stock"],
+              ["B000000001", 5, "", "B000000001", 4], ["B000000002", 7, "", "B000000002", 100]]
+    live = loaders.warehouse_live_from_rows(total, blocks, ("DE",)).set_index("asin")["wrh_live"]
+    assert live["B000000001"] == 11 - 4 and live["B000000002"] == 0 and live["B000000003"] == 13 and len(live) == 60
+    snap = pd.DataFrame({"asin": ["B000000001", "B0ZZZZZZZZ"], "awd_qty": [1, 2], "wrh_qty": [900, 800],
+                         "order_qty": [3, 4], "fba_stock_transit": [0, 0]})
+    out, note = loaders.apply_live_wrh(snap, live.reset_index())
+    got = out.set_index("asin")
+    assert got.loc["B000000001", "wrh_qty"] == 7 and got.loc["B0ZZZZZZZZ", "wrh_qty"] == 0 and got.loc["B0ZZZZZZZZ", "awd_qty"] == 2
+    assert note.startswith("Склад взят")
+
+
+def test_live_warehouse_empty_is_not_applied():
+    import loaders
+    snap = pd.DataFrame({"asin": ["B000000001"], "awd_qty": [1], "wrh_qty": [900], "order_qty": [0], "fba_stock_transit": [0]})
+    out, note = loaders.apply_live_wrh(snap, pd.DataFrame({"asin": [], "wrh_live": []}))
+    assert out is snap and "не применён" in note

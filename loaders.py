@@ -322,8 +322,9 @@ def build_meta(data: dict, specs: dict, stats: dict | None) -> list[dict]:
         "Источник": "Остатки AWD и склада США, заказы в производстве", "Откуда": specs["sources"] or "—",
         "Для чего": "Можно ли пополнить с AWD или склада; есть ли что отправлять морем или воздухом" + (
             "" if awd is None else f" (сейчас: AWD {awd:,.0f} шт., склад {wrh:,.0f} шт.)".replace(",", " ")),
-        "Строк": 0 if src is None else len(src), "Данные на": ("AWD свежий (файл Сергея), склад и заказы — снимок на начало месяца" if data.get("awd_note", "").startswith("AWD взят")
-                      else "снимок на начало месяца") if specs["sources"] == "bq" else "",
+        "Строк": 0 if src is None else len(src), "Данные на": ("AWD " + ("свежий" if data.get("awd_note", "").startswith("AWD взят") else "снимок 01.10") + ", склад "
+                      + ("свежий (без DE)" if data.get("wrh_note", "").startswith("Склад взят") else "снимок 01.10") + ", заказы снимок 01.10")
+                     if specs["sources"] == "bq" else "",
         "Статус": "нет" if src is None else "ок",
     })
     inc = data["incoming"]
@@ -361,6 +362,7 @@ def load_all(env: dict | None = None, credentials_file: str | None = None) -> di
         "incoming": env.get("INCOMING_SOURCE", ""),
         "shipments": env.get("SHIPMENTS_SOURCE", ""),
         "awd_live": env.get("AWD_LIVE_SOURCE", ""),
+        "wrh_live": env.get("WAREHOUSE_LIVE_SOURCE", ""),
     }
     warnings: list[str] = []
     try:
@@ -382,9 +384,23 @@ def load_all(env: dict | None = None, credentials_file: str | None = None) -> di
             awd_note = f"Свежий AWD не загружен ({type(exc).__name__}: {exc}); AWD взят из снимка на начало месяца."
         if not awd_note.startswith("AWD взят"):
             warnings.append(awd_note)
+    wrh_note = ""
+    if specs["wrh_live"].startswith("sheet:"):
+        try:
+            book = _gspread_book(specs["wrh_live"], credentials_file)
+            live_w = warehouse_live_from_rows(
+                book.worksheet(WAREHOUSE_TOTAL_TAB).get(value_render_option="UNFORMATTED_VALUE"),
+                book.worksheet(WAREHOUSE_BLOCKS_TAB).get(value_render_option="UNFORMATTED_VALUE"),
+                tuple(x.strip() for x in env.get("WAREHOUSE_EXCLUDE", "DE").split(",") if x.strip()))
+            sources, wrh_note = apply_live_wrh(sources, live_w)
+        except Exception as exc:  # свежий склад необязателен: остаёмся на снимке
+            wrh_note = f"Свежий склад не загружен ({type(exc).__name__}: {exc}); склад взят из снимка на начало месяца."
+        if not wrh_note.startswith("Склад взят"):
+            warnings.append(wrh_note)
     data = {
         "warnings": warnings,
         "awd_note": awd_note,
+        "wrh_note": wrh_note,
         "hopted": load_hopted(specs["hopted"], credentials_file),
         "reference": load_reference(specs["reference"]),
         "sources": sources,
@@ -483,3 +499,49 @@ def warehouse_pivots_check(spec: str, credentials_file: str | None = None) -> di
         blocks[label] = {"asin": len(items), "sum": round(sum(q for _, q in items)), "nonzero": sum(1 for _, q in items if q > 0)}
     res["pivot_ffbox"] = blocks
     return res
+
+
+WAREHOUSE_TOTAL_TAB = "Pivot Table warehouse"
+WAREHOUSE_BLOCKS_TAB = "pivot Warehouses FFbox"
+
+
+def _asin_like(v) -> bool:
+    v = str(v).strip().upper()
+    return len(v) == 10 and v[:2] == "B0" and v.isalnum()
+
+
+def warehouse_live_from_rows(total_rows: list[list], block_rows: list[list], exclude: tuple[str, ...] = ("DE",)) -> pd.DataFrame:
+    """Склад США = итог по ASIN со всех складов (Pivot Table warehouse) минус исключённые блоки FFbox (по умолчанию DE = Германия)."""
+    total: dict[str, float] = {}
+    for r in total_rows:
+        if len(r) > 1 and _asin_like(r[0]):
+            total[str(r[0]).strip().upper()] = total.get(str(r[0]).strip().upper(), 0.0) + _num(r[1])
+    names = [str(c).strip() for c in block_rows[0]] if block_rows else []
+    minus: dict[str, float] = {}
+    for col in (0, 3, 6, 9):
+        label = names[col].upper().split() if col < len(names) and names[col] else []
+        if label and label[-1] in {e.upper() for e in exclude}:
+            for r in block_rows:
+                if len(r) > col + 1 and _asin_like(r[col]):
+                    a = str(r[col]).strip().upper()
+                    minus[a] = minus.get(a, 0.0) + _num(r[col + 1])
+    qty = {a: max(q - minus.get(a, 0.0), 0.0) for a, q in total.items()}
+    return pd.DataFrame({"asin": list(qty), "wrh_live": list(qty.values())})
+
+
+def apply_live_wrh(sources: pd.DataFrame | None, live: pd.DataFrame) -> tuple[pd.DataFrame | None, str]:
+    """Подменяет wrh_qty остатком склада США; ASIN вне сводки получают 0. Не применяем пустой/нулевой результат."""
+    live_sum = float(live["wrh_live"].sum()) if not live.empty else 0.0
+    if sources is None or live_sum <= 0 or len(live) < 50:
+        return sources, "Свежий склад не применён: сводка пуста или слишком мала; склад взят из снимка на начало месяца."
+    old = sources.copy()
+    old_sum = float(pd.to_numeric(old["wrh_qty"], errors="coerce").fillna(0).sum())
+    old["asin"] = old["asin"].astype(str).str.upper()
+    m = old.merge(live, on="asin", how="outer")
+    for c in m.columns:
+        if c not in ("asin", "wrh_live", "wrh_qty"):
+            m[c] = m[c].where(m[c].notna(), 0)
+    m["wrh_qty"] = m["wrh_live"].fillna(0)
+    return m.drop(columns="wrh_live"), (
+        f"Склад взят из сводки склада (без DE): {live_sum:,.0f} шт. В снимке на начало месяца было {old_sum:,.0f} шт. "
+        "(там к складу добавлен inbound).").replace(",", " ")
