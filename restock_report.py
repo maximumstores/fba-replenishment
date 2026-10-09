@@ -153,3 +153,50 @@ def send_email(subject: str, body: str, to: list[str]) -> None:
         s.starttls()
         s.login(user, pwd)
         s.send_message(msg)
+
+
+DETAIL_COLUMNS = {"ab": "A/B", "category": "Category", "color": "Color", "size": "Size", "asin": "ASIN", "available": "Available",
+                  "inbound": "Inbound", "demand_2m": "Demand 2 мес", "need_units": "Срочно слать, шт", "lost_eur": "Потери, €"}
+GROUP_COLUMNS = {"ab": "A/B", "category": "Category", "color": "Color", "asins": "ASIN, шт", "need_units": "Срочно слать, шт", "lost_eur": "Потери, €"}
+
+
+def _table(df: pd.DataFrame, columns: dict[str, str]) -> list[list]:
+    """Заголовок + строки с русскими названиями; числа округлены, NaN → пусто. Значения пишем как есть (RAW)."""
+    cols = [c for c in columns if c in df.columns]
+    rows = [[columns[c] for c in cols]]
+    for _, r in df.iterrows():
+        row = []
+        for c in cols:
+            v = r[c]
+            row.append("" if pd.isna(v) else (round(float(v), 2) if isinstance(v, (int, float, np.integer, np.floating)) else str(v)))
+        rows.append(row)
+    return rows
+
+
+def write_tab(book, title: str, values: list[list], note: str = "") -> None:
+    """Создаёт вкладку при необходимости, очищает и пишет таблицу; строка 1 — пояснение, строка 3 — шапка, шапка закреплена."""
+    try:
+        ws = book.worksheet(title)
+    except Exception:
+        ws = book.add_worksheet(title=title, rows=max(len(values) + 10, 50), cols=max(len(values[0]) if values else 1, 8))
+    ws.clear()
+    payload = [[note], []] + values
+    ws.update(payload, "A1", value_input_option="RAW")
+    try:
+        ws.freeze(rows=3)
+    except Exception:
+        pass
+
+
+def publish(book, market: str, now: pd.DataFrame, plan: pd.DataFrame, stamp: str) -> list[str]:
+    """Пишет четыре вкладки рынка в таблицу-отчёт: списки ASIN и группы как у Нины, всё по потерянной выручке."""
+    spec = [
+        (f"{market} · Аут сейчас", _table(now, DETAIL_COLUMNS), f"{market}: ASIN без доступного стока сейчас. Обновлено {stamp}. Сортировка по потерянной выручке."),
+        (f"{market} · Аут сейчас (группы)", _table(grouped(now), GROUP_COLUMNS), f"{market}: аут сейчас по группам A/B → категория → цвет. Обновлено {stamp}."),
+        (f"{market} · Рест на 2 мес", _table(plan, DETAIL_COLUMNS),
+         f"{market}: срочно слать = Demand forecast 2 мес − (Available + Inbound). Обновлено {stamp}. Сортировка по потерянной выручке."),
+        (f"{market} · Рест на 2 мес (группы)", _table(grouped(plan), GROUP_COLUMNS), f"{market}: рест на 2 мес по группам A/B → категория → цвет. Обновлено {stamp}."),
+    ]
+    for title, values, note in spec:
+        write_tab(book, title, values, note)
+    return [t for t, _, _ in spec]

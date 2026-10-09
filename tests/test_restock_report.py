@@ -67,3 +67,43 @@ def test_render_text_has_both_reports_and_top_groups():
     now, plan = rr.out_now(df), rr.need_2m(df)
     t = rr.render_text("US", now, plan, ["B0AAAAAAA1"], [], [], ["B0ZZZZZZZZ"], url="https://x")
     assert "Аут сейчас: 2 ASIN (+1 / −0)" in t and "Срочно к рестоку" in t and "Топ групп" in t and t.endswith("https://x")
+
+
+class FakeWS:
+    def __init__(self):
+        self.cleared, self.payload, self.frozen = False, None, None
+
+    def clear(self):
+        self.cleared = True
+
+    def update(self, values, cell, value_input_option=None):
+        self.payload, self.cell, self.mode = values, cell, value_input_option
+
+    def freeze(self, rows=0):
+        self.frozen = rows
+
+
+class FakeBook:
+    def __init__(self):
+        self.tabs: dict[str, FakeWS] = {}
+
+    def worksheet(self, title):
+        if title not in self.tabs:
+            raise KeyError(title)
+        return self.tabs[title]
+
+    def add_worksheet(self, title, rows, cols):
+        self.tabs[title] = FakeWS()
+        return self.tabs[title]
+
+
+def test_publish_writes_four_tabs_with_note_header_and_sorted_rows():
+    df = rr.normalize(raw(), "US")
+    book = FakeBook()
+    names = rr.publish(book, "US", rr.out_now(df), rr.need_2m(df), "09.10 11:30")
+    assert names == ["US · Аут сейчас", "US · Аут сейчас (группы)", "US · Рест на 2 мес", "US · Рест на 2 мес (группы)"]
+    ws = book.tabs["US · Аут сейчас"]
+    assert ws.cleared and ws.mode == "RAW" and ws.frozen == 3
+    assert ws.payload[0][0].startswith("US: ASIN без доступного стока") and ws.payload[2][0] == "A/B"
+    assert ws.payload[3][4] == "B0AAAAAAA1"  # первая строка — самые большие потери
+    assert book.tabs["US · Рест на 2 мес (группы)"].payload[2][:3] == ["A/B", "Category", "Color"]
