@@ -107,7 +107,7 @@ def test_main_sends_and_then_stays_quiet(tmp_path, monkeypatch):
     monkeypatch.chdir(Path(__file__).resolve().parent.parent)
     monkeypatch.setattr(alert, "STATE_FILE", tmp_path / "state.json")
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "t")
-    monkeypatch.setenv("TELEGRAM_CHAT_ID", "c")
+    monkeypatch.setattr(alert.tg_subscribers, "sync", lambda token: {"chats": {"1": "g"}, "offset": 0})
     sent = []
     monkeypatch.setattr(alert, "send_telegram", lambda text, token, chat: sent.append(text))
     assert alert.main([]) == 0 and len(sent) == 1

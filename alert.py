@@ -21,6 +21,7 @@ import pandas as pd
 
 import calc
 import loaders
+import tg_subscribers
 import transit
 from config import CHANNEL_RU, Settings
 
@@ -148,14 +149,18 @@ def main(argv: list[str] | None = None) -> int:
         save_state(state)
         return 0
 
-    token, chat = os.getenv("TELEGRAM_BOT_TOKEN"), os.getenv("TELEGRAM_CHAT_ID")
-    if not token or not chat:
-        print("Нет TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID — вот что было бы отправлено:\n")
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chats: list[str] = []
+    if token:
+        chats = tg_subscribers.recipients(tg_subscribers.sync(token))
+    if not token or not chats:
+        print("Нет TELEGRAM_BOT_TOKEN или никто не подписан (нажмите Start у бота) — вот что было бы отправлено:\n")
         print(text)
         return 2  # состояние не сохраняем, чтобы алерт не потерялся
-    send_telegram(text, token, chat)
+    for chat in chats:
+        send_telegram(text, token, chat)
     save_state(state)  # сохраняем только после успешной отправки
-    print(f"Отправлено: новых {len(new)}, всего проблемных {len(problem)}")
+    print(f"Отправлено {len(chats)} подписчикам: новых {len(new)}, всего проблемных {len(problem)}")
     return 0
 
 
