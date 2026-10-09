@@ -642,3 +642,22 @@ def tab_preview(spec: str, tab: str, rows: int = 80, credentials_file: str | Non
     df.columns = [f"C{i + 1}" for i in range(width)]
     df.index = range(1, len(df) + 1)
     return df.loc[:, (df != "").any(axis=0)] if not df.empty else df
+
+
+def sheet_id_from(text: str) -> str:
+    """ID таблицы из ссылки docs.google.com/spreadsheets/d/<id>/… или из самого ID."""
+    import re
+
+    m = re.search(r"/spreadsheets/d/([A-Za-z0-9_-]{20,})", text or "")
+    if m:
+        return m.group(1)
+    t = (text or "").strip()
+    if re.fullmatch(r"[A-Za-z0-9_-]{20,}", t):
+        return t
+    raise ValueError("Не нашёл ID таблицы: вставьте ссылку вида https://docs.google.com/spreadsheets/d/…")
+
+
+def list_tabs(spec: str, credentials_file: str | None = None) -> list[dict]:
+    """Вкладки таблицы: название, размер, gid."""
+    return [{"tab": w.title, "rows": w.row_count, "cols": w.col_count, "gid": w.id}
+            for w in _gspread_book(spec, credentials_file).worksheets()]

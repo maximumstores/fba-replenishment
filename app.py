@@ -314,12 +314,23 @@ def show_workbook_scan() -> None:
 
 
 def show_tab_viewer() -> None:
-    """Админский просмотр любой вкладки файла Сергея."""
-    with st.expander("Диагностика: показать вкладку файла Сергея"):
-        spec = os.getenv("AWD_LIVE_SOURCE", "")
+    """Админский просмотр любой таблицы, открытой для сервисного аккаунта: список вкладок и содержимое."""
+    with st.expander("Диагностика: открыть любую таблицу (ссылка) и посмотреть вкладки"):
+        default = "https://docs.google.com/spreadsheets/d/" + os.getenv("AWD_LIVE_SOURCE", "sheet:")[len("sheet:"):]
+        link = st.text_input("Ссылка на таблицу", default, key="viewer_link")
+        try:
+            spec = "sheet:" + loaders.sheet_id_from(link)
+        except Exception as exc:
+            st.error(str(exc))
+            return
+        if st.button("Список вкладок", key="viewer_tabs_btn"):
+            try:
+                st.dataframe(pd.DataFrame(loaders.list_tabs(spec)), hide_index=True, use_container_width=True)
+            except Exception as exc:
+                st.error(f"{type(exc).__name__}: {exc}")
         tab = st.text_input("Название вкладки", "Fulfillment-BOX CA", key="viewer_tab")
         n = st.slider("Сколько строк", 20, 400, 80, key="viewer_rows")
-        if spec.startswith("sheet:") and st.button("Показать", key="viewer_btn"):
+        if st.button("Показать вкладку", key="viewer_btn"):
             try:
                 st.dataframe(loaders.tab_preview(spec, tab, n), use_container_width=True)
             except Exception as exc:
