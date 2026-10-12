@@ -187,3 +187,4 @@ def test_block_market_shares_separates_markets():
 
 def test_norm_tab_ignores_spaces_case_and_nbsp():
     assert loaders._norm_tab("%  Available\xa0Q4") == loaders._norm_tab("% available q4")
+    assert loaders._norm_tab("%  Available OCT DE") == loaders._norm_tab("Available OCT DE")

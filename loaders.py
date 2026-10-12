@@ -632,7 +632,7 @@ def find_hints(spec: str, tabs: list[str] | None = None, words: tuple[str, ...] 
 
 def _norm_tab(name: str) -> str:
     """Название вкладки без различий в регистре, неразрывных и двойных пробелах («%  Available Q4» = «% available q4»)."""
-    return " ".join(str(name).replace("\xa0", " ").split()).lower()
+    return " ".join(str(name).replace("\xa0", " ").lstrip("% \xa0").split()).lower()
 
 
 def tab_preview(spec: str, tab: str, rows: int = 80, credentials_file: str | None = None) -> pd.DataFrame:
