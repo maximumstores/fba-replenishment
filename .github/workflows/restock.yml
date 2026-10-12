@@ -1,0 +1,34 @@
+name: FBA restock report (US/CA/DE/UK)
+
+on:
+  schedule:
+    - cron: "30 6 * * 1-5"   # будни 06:30 UTC = 09:30 Киев (после ночной загрузки Hopted)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Build report
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          RESTOCK_REPORT_SHEET: ${{ vars.RESTOCK_REPORT_SHEET }}
+          DASHBOARD_URL: ${{ vars.DASHBOARD_URL }}
+          BQ_PROJECT: reorder-497714
+        run: python restock_job.py --always
+      - name: Save state
+        run: |
+          git config user.name "fba-alert-bot"
+          git config user.email "noreply@github.com"
+          git add -f state/restock_state.json state/subscribers.json || true
+          git diff --cached --quiet || (git commit -m "restock state" && git pull --rebase -q && git push)
