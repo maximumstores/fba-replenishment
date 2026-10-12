@@ -188,7 +188,7 @@ def write_tab(book, title: str, values: list[list], note: str = "") -> None:
         pass
 
 
-def publish(book, market: str, now: pd.DataFrame, plan: pd.DataFrame, stamp: str) -> list[str]:
+def publish(book, market: str, now: pd.DataFrame, plan: pd.DataFrame, stamp: str, with_plan: bool = True) -> list[str]:
     """Пишет четыре вкладки рынка в таблицу-отчёт: списки ASIN и группы как у Нины, всё по потерянной выручке."""
     spec = [
         (f"{market} · Аут сейчас", _table(now, DETAIL_COLUMNS), f"{market}: ASIN без доступного стока сейчас. Обновлено {stamp}. Сортировка по потерянной выручке."),
@@ -197,6 +197,8 @@ def publish(book, market: str, now: pd.DataFrame, plan: pd.DataFrame, stamp: str
          f"{market}: срочно слать = Demand forecast 2 мес − (Available + Inbound). Обновлено {stamp}. Сортировка по потерянной выручке."),
         (f"{market} · Рест на 2 мес (группы)", _table(grouped(plan), GROUP_COLUMNS), f"{market}: рест на 2 мес по группам A/B → категория → цвет. Обновлено {stamp}."),
     ]
+    if not with_plan:  # рынки без прогноза спроса: вкладки «Рест на 2 мес» не создаём
+        spec = spec[:2]
     for title, values, note in spec:
         write_tab(book, title, values, note)
     return [t for t, _, _ in spec]

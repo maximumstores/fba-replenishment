@@ -38,16 +38,7 @@ def run_market(market: str, df: pd.DataFrame, state: dict, stamp: str, book=None
     now = rr.out_now(df)
     plan = rr.need_2m(df) if market in HAS_PLAN else df.iloc[0:0].assign(need_units=0.0)
     if book is not None:
-        if market in HAS_PLAN:
-            rr.publish(book, market, now, plan, stamp)
-        else:
-            tabs = rr.publish(book, market, now, plan, stamp)
-            # для рынков без прогноза вкладки «Рест на 2 мес» не нужны — оставляем только «Аут сейчас»
-            for t in tabs[2:]:
-                try:
-                    book.del_worksheet(book.worksheet(t))
-                except Exception:
-                    pass
+        rr.publish(book, market, now, plan, stamp, with_plan=market in HAS_PLAN)
     cur1, cur2 = set(now["asin"]), set(plan["asin"])
     a1, r1 = rr.diff_lists(set(state.get(f"{market}:now", [])), cur1)
     a2, r2 = rr.diff_lists(set(state.get(f"{market}:plan", [])), cur2)
@@ -79,6 +70,13 @@ def main(argv: list[str] | None = None) -> int:
     state = rr.load_state(STATE_FILE)
 
     texts, changed = [], False
+    if book is not None:  # пустой лист по умолчанию после первого запуска больше не нужен
+        try:
+            default = book.worksheet("Sheet1")
+            if len(book.worksheets()) > 1 and not default.get_all_values():
+                book.del_worksheet(default)
+        except Exception:
+            pass
     for m in markets:
         t, ch, *_ = run_market(m, data[m], state, stamp, book)
         texts.append(t)
