@@ -183,3 +183,7 @@ def test_block_market_shares_separates_markets():
     blocks = {"FF box TX": {"B0A": 100.0, "B0B": 0.0}, "FFBox DE": {"B0A": 0.0, "B0B": 50.0}}
     res = loaders.block_market_shares(blocks, vel).set_index("Склад")
     assert res.loc["FF box TX", "доля US, %"] == 90 and res.loc["FFBox DE", "доля DE, %"] == 80
+
+
+def test_norm_tab_ignores_spaces_case_and_nbsp():
+    assert loaders._norm_tab("%  Available\xa0Q4") == loaders._norm_tab("% available q4")

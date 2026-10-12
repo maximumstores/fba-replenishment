@@ -630,12 +630,19 @@ def find_hints(spec: str, tabs: list[str] | None = None, words: tuple[str, ...] 
     return {"tabs_read": use, "counts": counts, "samples": found[:40], "heads": heads}
 
 
+def _norm_tab(name: str) -> str:
+    """Название вкладки без различий в регистре, неразрывных и двойных пробелах («%  Available Q4» = «% available q4»)."""
+    return " ".join(str(name).replace("\xa0", " ").split()).lower()
+
+
 def tab_preview(spec: str, tab: str, rows: int = 80, credentials_file: str | None = None) -> pd.DataFrame:
     """Первые строки вкладки как есть (без шапки), для просмотра в админской диагностике."""
     book = _gspread_book(spec, credentials_file)
-    ws = next((w for w in book.worksheets() if w.title.strip().lower() == tab.strip().lower()), None)
+    sheets = book.worksheets()
+    ws = next((w for w in sheets if _norm_tab(w.title) == _norm_tab(tab)), None)
     if ws is None:
-        raise ValueError(f"Нет вкладки «{tab}»")
+        near = [w.title for w in sheets if _norm_tab(tab) in _norm_tab(w.title)][:8]
+        raise ValueError(f"Нет вкладки «{tab}». Похожие: {near}" if near else f"Нет вкладки «{tab}»")
     vals = ws.get(f"A1:AZ{rows}", value_render_option="FORMATTED_VALUE")
     width = max((len(r) for r in vals), default=0)
     df = pd.DataFrame([[str(c) for c in (r + [""] * width)[:width]] for r in vals])
