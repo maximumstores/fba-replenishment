@@ -126,16 +126,16 @@ def save_state(path: str | Path, state: dict[str, list[str]]) -> None:
 
 
 def render_text(market: str, now: pd.DataFrame, plan: pd.DataFrame, added1: list[str], removed1: list[str],
-                added2: list[str], removed2: list[str], top: int = 8, url: str = "") -> str:
+                added2: list[str], removed2: list[str], top: int = 8, url: str = "", cur: str = "€", basis: str = "") -> str:
     lines = [f"{market}: отчёт по аутам",
-             f"1) Аут сейчас: {len(now)} ASIN (+{len(added1)} / −{len(removed1)}), потери ≈ {now['lost_eur'].sum():,.0f} €",
+             f"1) Аут сейчас: {len(now)} ASIN (+{len(added1)} / −{len(removed1)}), потери ≈ {now['lost_eur'].sum():,.0f} {cur}{basis}",
              f"2) Срочно к рестоку на 2 мес: {len(plan)} ASIN (+{len(added2)} / −{len(removed2)}), "
-             f"{plan['need_units'].sum():,.0f} шт., потери ≈ {plan['lost_eur'].sum():,.0f} €"]
+             f"{plan['need_units'].sum():,.0f} шт., потери ≈ {plan['lost_eur'].sum():,.0f} {cur}{basis}"]
     g = grouped(plan).head(top)
     if not g.empty:
         lines.append("Топ групп по потерям (A/B · категория · цвет):")
         for _, r in g.iterrows():
-            lines.append(f"• {r['ab'] or '—'} · {r['category'] or '—'} · {r['color'] or '—'}: {r['need_units']:,.0f} шт., {r['lost_eur']:,.0f} €")
+            lines.append(f"• {r['ab'] or '—'} · {r['category'] or '—'} · {r['color'] or '—'}: {r['need_units']:,.0f} шт., {r['lost_eur']:,.0f} {cur}")
     if url:
         lines.append(url)
     return "\n".join(lines).replace(",", " ")

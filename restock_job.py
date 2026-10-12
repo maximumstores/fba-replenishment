@@ -46,7 +46,7 @@ def run_market(market: str, df: pd.DataFrame, state: dict, stamp: str, book=None
     a2, r2 = rr.diff_lists(set(state.get(f"{market}:plan", [])), cur2)
     state[f"{market}:now"], state[f"{market}:plan"] = sorted(cur1), sorted(cur2)
     changed = bool(a1 or r1 or a2 or r2)
-    text = rr.render_text(market, now, plan, a1, r1, a2, r2) if market in HAS_PLAN else _text_now_only(market, now, a1, r1)
+    text = rr.render_text(market, now, plan, a1, r1, a2, r2, cur=CURRENCY.get(market, '€'), basis=' (по себестоимости)') if market in HAS_PLAN else _text_now_only(market, now, a1, r1)
     return text, changed, now, plan
 
 
