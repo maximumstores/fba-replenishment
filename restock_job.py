@@ -22,8 +22,10 @@ import tg_subscribers
 
 STATE_FILE = Path("state/restock_state.json")
 SHEET_URL = "https://docs.google.com/spreadsheets/d/{id}/edit"
-CURRENCY = {"US": "$", "CA": "CAD", "UK": "£", "DE": "€"}
-HAS_PLAN = {"US"}  # прогноз спроса на 2 мес есть пока только для US
+CURRENCY = {"US": "$", "CA": "CAD", "UK": "€", "DE": "€"}  # UK-деньги считаем по цене DE (€), пока нет UK-цены
+HAS_PLAN = {"US", "DE", "UK"}  # план на 2 мес: US — BigQuery plan_sales, DE/UK — вкладки Нины
+REAL_PRICE = {"DE", "UK"}  # деньги по цене из таблицы Нины (UK — цена DE); у US/CA пока себестоимость
+BASIS = {"DE": " (по цене Нины)", "UK": " (цена DE, ориентир)"}
 
 
 def open_book(sheet_id: str):
@@ -40,13 +42,13 @@ def run_market(market: str, df: pd.DataFrame, state: dict, stamp: str, book=None
     plan = rr.need_2m(df) if market in HAS_PLAN else df.iloc[0:0].assign(need_units=0.0)
     if book is not None:
         rr.publish(book, market, now, plan, stamp, with_plan=market in HAS_PLAN,
-                   lost_label=f"Потери, {CURRENCY.get(market, '')} (по себестоимости)")
+                   lost_label=f"Потери, {CURRENCY.get(market, '')}{BASIS.get(market, ' (по себестоимости)')}")
     cur1, cur2 = set(now["asin"]), set(plan["asin"])
     a1, r1 = rr.diff_lists(set(state.get(f"{market}:now", [])), cur1)
     a2, r2 = rr.diff_lists(set(state.get(f"{market}:plan", [])), cur2)
     state[f"{market}:now"], state[f"{market}:plan"] = sorted(cur1), sorted(cur2)
     changed = bool(a1 or r1 or a2 or r2)
-    text = rr.render_text(market, now, plan, a1, r1, a2, r2, cur=CURRENCY.get(market, '€'), basis=' (по себестоимости)') if market in HAS_PLAN else _text_now_only(market, now, a1, r1)
+    text = rr.render_text(market, now, plan, a1, r1, a2, r2, cur=CURRENCY.get(market, '€'), basis=BASIS.get(market, ' (по себестоимости)')) if market in HAS_PLAN else _text_now_only(market, now, a1, r1)
     return text, changed, now, plan
 
 

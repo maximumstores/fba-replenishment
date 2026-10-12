@@ -80,7 +80,18 @@ def load_markets(markets: tuple[str, ...] = ("US", "CA", "DE", "UK")) -> dict[st
     dim = loaders._bq_query(DIM_SQL.format(p=p))
     demand = loaders._bq_query(DEMAND_SQL.format(p=p))
     result = {}
+    nina = {}
+    want = tuple(m for m in markets if m in ("DE", "UK"))
+    if want:  # DE/UK — по вкладкам Нины (план + цена €); при сбое падаем обратно на Hopted и говорим об этом
+        try:
+            import nina_sheet
+            nina = nina_sheet.load_nina(want)
+        except Exception as exc:
+            print(f"[warn] вкладки Нины недоступны ({exc}); DE/UK считаю по Hopted без плана и цены")
     for m in markets:
+        if m in nina:
+            result[m] = nina[m]
+            continue
         table, codes = MARKETS[m]
         rows = loaders._bq_frame_to_rows(loaders._bq_query(f"SELECT * FROM `{p}.mt.{table}`"))
         result[m] = build_market(m, parse_hopted(rows, codes), dim, demand if m == "US" else None)

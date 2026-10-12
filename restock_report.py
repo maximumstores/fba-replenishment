@@ -194,10 +194,10 @@ def publish(book, market: str, now: pd.DataFrame, plan: pd.DataFrame, stamp: str
     DETAIL_COLUMNS_L = {**DETAIL_COLUMNS, "lost_eur": lost_label}
     GROUP_COLUMNS_L = {**GROUP_COLUMNS, "lost_eur": lost_label}
     spec = [
-        (f"{market} · Аут сейчас", _table(now, DETAIL_COLUMNS_L), f"{market}: ASIN без доступного стока сейчас. Обновлено {stamp}. Сортировка по потерям (пока по себестоимости, не по выручке)."),
+        (f"{market} · Аут сейчас", _table(now, DETAIL_COLUMNS_L), f"{market}: ASIN без доступного стока сейчас. Обновлено {stamp}. Сортировка по колонке «Потери» (деньги; основа указана в заголовке колонки)."),
         (f"{market} · Аут сейчас (группы)", _table(grouped(now), GROUP_COLUMNS_L), f"{market}: аут сейчас по группам A/B → категория → цвет. Обновлено {stamp}."),
         (f"{market} · Рест на 2 мес", _table(plan, DETAIL_COLUMNS_L),
-         f"{market}: срочно слать = Demand forecast 2 мес − (Available + Inbound). Обновлено {stamp}. Сортировка по потерям (пока по себестоимости, не по выручке)."),
+         f"{market}: срочно слать = Demand forecast 2 мес − (Available + Inbound). Обновлено {stamp}. Сортировка по колонке «Потери» (деньги; основа указана в заголовке колонки)."),
         (f"{market} · Рест на 2 мес (группы)", _table(grouped(plan), GROUP_COLUMNS_L), f"{market}: рест на 2 мес по группам A/B → категория → цвет. Обновлено {stamp}."),
     ]
     if not with_plan:  # рынки без прогноза спроса: вкладки «Рест на 2 мес» не создаём

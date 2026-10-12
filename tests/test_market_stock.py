@@ -40,11 +40,11 @@ def test_build_market_and_out_now_sorted_by_money():
 def test_run_market_diff_and_text(tmp_path):
     import restock_job as rj
     stock = pd.DataFrame({"asin": ["B0AAAAAAA1"], "available": [0], "inbound": [0], "days_supply": [0]})
-    df = ms.build_market("DE", stock, pd.DataFrame({"asin": ["B0AAAAAAA1"], "ab": ["A"], "category": ["Mens"], "color": ["Black"], "size": ["L"], "cogs": [10.0]}), None)
+    df = ms.build_market("CA", stock, pd.DataFrame({"asin": ["B0AAAAAAA1"], "ab": ["A"], "category": ["Mens"], "color": ["Black"], "size": ["L"], "cogs": [10.0]}), None)
     state = {}
-    t, ch, now, plan = rj.run_market("DE", df, state, "x")
+    t, ch, now, plan = rj.run_market("CA", df, state, "x")
     assert ch and "аут сейчас — 1 ASIN (+1 / −0)" in t and plan.empty
-    t2, ch2, *_ = rj.run_market("DE", df, state, "x")
+    t2, ch2, *_ = rj.run_market("CA", df, state, "x")
     assert not ch2
 
 
