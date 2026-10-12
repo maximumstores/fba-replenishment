@@ -22,6 +22,7 @@ import tg_subscribers
 
 STATE_FILE = Path("state/restock_state.json")
 SHEET_URL = "https://docs.google.com/spreadsheets/d/{id}/edit"
+CURRENCY = {"US": "$", "CA": "CAD", "UK": "£", "DE": "€"}
 HAS_PLAN = {"US"}  # прогноз спроса на 2 мес есть пока только для US
 
 
@@ -38,7 +39,8 @@ def run_market(market: str, df: pd.DataFrame, state: dict, stamp: str, book=None
     now = rr.out_now(df)
     plan = rr.need_2m(df) if market in HAS_PLAN else df.iloc[0:0].assign(need_units=0.0)
     if book is not None:
-        rr.publish(book, market, now, plan, stamp, with_plan=market in HAS_PLAN)
+        rr.publish(book, market, now, plan, stamp, with_plan=market in HAS_PLAN,
+                   lost_label=f"Потери, {CURRENCY.get(market, '')} (по себестоимости)")
     cur1, cur2 = set(now["asin"]), set(plan["asin"])
     a1, r1 = rr.diff_lists(set(state.get(f"{market}:now", [])), cur1)
     a2, r2 = rr.diff_lists(set(state.get(f"{market}:plan", [])), cur2)
@@ -49,7 +51,7 @@ def run_market(market: str, df: pd.DataFrame, state: dict, stamp: str, book=None
 
 
 def _text_now_only(market: str, now: pd.DataFrame, added: list[str], removed: list[str]) -> str:
-    lines = [f"{market}: аут сейчас — {len(now)} ASIN (+{len(added)} / −{len(removed)}), потери ≈ {now['lost_eur'].sum():,.0f} (по себестоимости)"]
+    lines = [f"{market}: аут сейчас — {len(now)} ASIN (+{len(added)} / −{len(removed)}), потери ≈ {now['lost_eur'].sum():,.0f} {CURRENCY.get(market, '')} (по себестоимости)"]
     for _, r in rr.grouped(now).head(5).iterrows():
         lines.append(f"• {r['ab'] or '—'} · {r['category'] or '—'} · {r['color'] or '—'}: {r['asins']} ASIN")
     return "\n".join(lines).replace(",", " ")
