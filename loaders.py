@@ -641,6 +641,10 @@ def tab_preview(spec: str, tab: str, rows: int = 80, credentials_file: str | Non
     sheets = book.worksheets()
     ws = next((w for w in sheets if _norm_tab(w.title) == _norm_tab(tab)), None)
     if ws is None:
+        near_ws = [w for w in sheets if _norm_tab(tab) in _norm_tab(w.title)]
+        if len(near_ws) == 1:  # единственное частичное совпадение («Sales next» → «Sales next 180days»)
+            ws = near_ws[0]
+    if ws is None:
         near = [w.title for w in sheets if _norm_tab(tab) in _norm_tab(w.title)][:8]
         raise ValueError(f"Нет вкладки «{tab}». Похожие: {near}" if near else f"Нет вкладки «{tab}»")
     vals = ws.get(f"A1:AZ{rows}", value_render_option="FORMATTED_VALUE")
