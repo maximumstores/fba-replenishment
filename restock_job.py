@@ -99,7 +99,9 @@ def main(argv: list[str] | None = None) -> int:
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     chats = tg_subscribers.recipients(tg_subscribers.sync(token)) if token else []
     if not chats:
-        print("Некому слать (нет токена или подписчиков) — вот сообщение:\n" + msg)
+        print("Некому слать (нет токена или подписчиков). Нажмите Start у бота и запустите снова. Диагностика: "
+              + (tg_subscribers.diagnose(token) if token else "нет TELEGRAM_BOT_TOKEN") + "\n\n" + msg)
+        rr.save_state(STATE_FILE, state)  # таблица уже обновлена; список запоминаем, чтобы первое сообщение не потерялось при следующем запуске
         return 2
     import requests
 

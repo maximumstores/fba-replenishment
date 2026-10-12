@@ -71,3 +71,18 @@ def recipients(d: dict) -> list[str]:
     """Подписчики + необязательный TELEGRAM_CHAT_ID (можно несколько через запятую)."""
     extra = [c.strip() for c in os.getenv("TELEGRAM_CHAT_ID", "").split(",") if c.strip()]
     return list(dict.fromkeys([*d["chats"], *extra]))
+
+
+def diagnose(token: str) -> str:
+    """Почему нет подписчиков: чей это бот, не стоит ли webhook (он блокирует getUpdates), сколько сообщений в очереди."""
+    import requests
+
+    out = []
+    try:
+        me = requests.get(f"https://api.telegram.org/bot{token}/getMe", timeout=30).json()
+        out.append(f"бот: @{(me.get('result') or {}).get('username')} ok={me.get('ok')}")
+        wh = requests.get(f"https://api.telegram.org/bot{token}/getWebhookInfo", timeout=30).json().get("result", {})
+        out.append(f"webhook: {wh.get('url') or 'нет'}; ждёт сообщений: {wh.get('pending_update_count')}; ошибка: {wh.get('last_error_message') or '-'}")
+    except Exception as exc:
+        out.append(f"диагностика не удалась: {exc}")
+    return "; ".join(out)
