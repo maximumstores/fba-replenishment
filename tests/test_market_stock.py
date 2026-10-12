@@ -29,12 +29,12 @@ def test_parse_filters_country_sums_stores_and_inbound():
 def test_build_market_and_out_now_sorted_by_money():
     stock = pd.DataFrame({"asin": ["B0AAAAAAA1", "B0BBBBBBB2", "B0CCCCCCC3"], "available": [0, 0, 5], "inbound": [0, 0, 0], "days_supply": [0, 0, 3]})
     dim = pd.DataFrame({"asin": ["B0AAAAAAA1", "B0BBBBBBB2"], "ab": ["A", "B"], "category": ["Mens", "Pants"], "color": ["Black", "Grey"],
-                        "size": ["L", "M"], "cogs": [10.0, 5.0]})
+                        "size": ["L", "M"], "cogs": [10.0, 5.0], "active_us": [True, True]})
     demand = pd.DataFrame({"asin": ["B0AAAAAAA1", "B0BBBBBBB2"], "demand_2m": [100.0, 100.0]})
     df = ms.build_market("US", stock, dim, demand)
     r = rr.out_now(df)
     assert list(r["asin"]) == ["B0AAAAAAA1", "B0BBBBBBB2"] and r.loc[0, "lost_eur"] == 1000
-    assert df.loc[df.asin == "B0CCCCCCC3", "category"].iloc[0] == "(нет в справочнике)"
+    assert "B0CCCCCCC3" not in set(df["asin"])  # нет в справочнике → не активный, в отчёт не попадает
 
 
 def test_run_market_diff_and_text(tmp_path):
@@ -46,3 +46,10 @@ def test_run_market_diff_and_text(tmp_path):
     assert ch and "аут сейчас — 1 ASIN (+1 / −0)" in t and plan.empty
     t2, ch2, *_ = rj.run_market("DE", df, state, "x")
     assert not ch2
+
+
+def test_inactive_asins_are_dropped():
+    stock = pd.DataFrame({"asin": ["B0AAAAAAA1", "B0BBBBBBB2"], "available": [0, 0], "inbound": [0, 0], "days_supply": [0, 0]})
+    dim = pd.DataFrame({"asin": ["B0AAAAAAA1", "B0BBBBBBB2"], "ab": ["A", "A"], "category": ["x", "x"], "color": ["c", "c"], "size": ["L", "L"],
+                        "cogs": [1.0, 1.0], "active_de": [True, False]})
+    assert list(ms.build_market("DE", stock, dim, None)["asin"]) == ["B0AAAAAAA1"]

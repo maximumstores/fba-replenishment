@@ -50,7 +50,7 @@ def parse_hopted(rows: list[list], codes: set[str] | None = None) -> pd.DataFram
 
 
 DIM_SQL = """SELECT d.asin, COALESCE(NULLIF(d.ab_winter_a,''), NULLIF(d.abcd_class,''), '') AS ab, d.category, d.color, d.size,
-       c.avg_cogs AS cogs
+       c.avg_cogs AS cogs, d.active_us, d.active_ca, d.active_de, d.active_uk
 FROM `{p}.forecast.dim_product` d LEFT JOIN `{p}.forecast.group_cogs` c USING (group_key)"""
 DEMAND_SQL = """SELECT asin, SUM(plan_units) AS demand_2m FROM `{p}.forecast.plan_sales`
 WHERE month >= DATE_TRUNC(CURRENT_DATE(), MONTH) AND month < DATE_ADD(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 2 MONTH)
@@ -60,6 +60,9 @@ GROUP BY asin"""
 def build_market(market: str, stock: pd.DataFrame, dim: pd.DataFrame, demand: pd.DataFrame | None) -> pd.DataFrame:
     """Склеивает остатки, справочник и (если есть) спрос в нормализованный вид. Цена = себестоимость группы (прокси)."""
     df = stock.merge(dim.drop_duplicates("asin"), on="asin", how="left")
+    flag = f"active_{market.lower()}"
+    if flag in df.columns:  # в отчёт только ASIN, активные на этом рынке (в Hopted много старых и выведенных)
+        df = df[df[flag].fillna(False).astype(bool)]
     df["demand_2m"] = 0.0
     if demand is not None and not demand.empty:
         df = df.merge(demand.drop_duplicates("asin"), on="asin", how="left", suffixes=("", "_p"))
