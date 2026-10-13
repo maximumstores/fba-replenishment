@@ -1,0 +1,249 @@
+{
+ "asin": "B0BDZGH33K",
+ "rows": [
+  2171
+ ],
+ "tab": "Orders ",
+ "cells": [
+  {
+   "row": 2171,
+   "cols": [
+    {
+     "h": "ASIN",
+     "formula": "B0BDZGH33K",
+     "value": "B0BDZGH33K"
+    },
+    {
+     "h": "",
+     "formula": "=VLOOKUP(A2171,D:D,1,0)",
+     "value": "#N/A (Did not find value 'B0BDZGH33K' in VLOOKUP evaluation.)"
+    },
+    {
+     "h": "RESTOCK? ",
+     "formula": "=IF(Y2171=Y$2, IF(G2171*0.7>J2171,J2171-G2171*0.7,\"OK\"),\"OK\")",
+     "value": "OK"
+    },
+    {
+     "h": "RESTOCK!!!!!",
+     "formula": "=IF(Y2171=Y$2, IF(G2171*$G$4/31>J2171+I2171,J2171+I2171-G2171*$G$4/31,\"OK\"),\"OK\")",
+     "value": "OK"
+    },
+    {
+     "h": "Plan Oct",
+     "formula": "=M2171",
+     "value": 96
+    },
+    {
+     "h": "Total Quantity",
+     "formula": "=IFERROR(VLOOKUP(A2171,'Pivot Table stock amazon'!B:I,2,0),\"0\")",
+     "value": 247
+    },
+    {
+     "h": "Inbound+FC Transfer+FC Processing",
+     "formula": "=IFERROR(VLOOKUP(A2171,'Pivot Table stock amazon'!B:I,3,0),\"0\")+IFERROR(VLOOKUP(A2171,'Pivot Table stock amazon'!B:I,5,0),\"0\")+IFERROR(VLOOKUP(A2171,'Pivot Table stock amazon'!B:I,6,0),\"0\")",
+     "value": 148
+    },
+    {
+     "h": "Available",
+     "formula": "=IFERROR(VLOOKUP(A2171,'Pivot Table stock amazon'!B:I,4,0),\"0\")",
+     "value": 199
+    },
+    {
+     "h": "Rstock Q4",
+     "formula": "=if(J2171+I2171-L2171<0,J2171+I2171-L2171,\"OK\")",
+     "value": -123
+    },
+    {
+     "h": "PLAN Q4",
+     "formula": "=SUM(M2171:O2171)",
+     "value": 470
+    },
+    {
+     "h": "Plan 10'26",
+     "formula": 96,
+     "value": 96
+    },
+    {
+     "h": "Plan 11'26",
+     "formula": 187,
+     "value": 187
+    },
+    {
+     "h": "Plan 12'26",
+     "formula": 187,
+     "value": 187
+    },
+    {
+     "h": "A/B category+color for winter'25-'26",
+     "formula": "A",
+     "value": "A"
+    },
+    {
+     "h": "Fulfillment-BOX TX",
+     "formula": "=IFERROR(\n  VLOOKUP(\n    A2171,\n    IF(\n      $Q$1=\"Fulfillment-BOX CA\",\n      'pivot Warehouses FFbox'!A:B,\n      IF(\n        $Q$1=\"Fulfillment-BOX DE\",\n        'pivot Warehouses FFbox'!D:E,\n        IF(\n          $Q$1=\"Fulfillment-BOX FL\",\n          'pivot Warehouses FFbox'!G:H,\n          IF(\n            $Q$1=\"Fulfillment-BOX TX\",\n            'pivot Warehouses FFbox'!J:K,\n            {}\n          )\n        )\n      )\n    ),\n    2,\n    FALSE\n  ),\n  0)",
+     "value": 0
+    },
+    {
+     "h": "WRH QTY",
+     "formula": "=IFERROR(VLOOKUP(A2171,'Pivot Table warehouse'!A:B,2,0),0)",
+     "value": 0
+    },
+    {
+     "h": "ASIN",
+     "formula": "B0BDZGH33K",
+     "value": "B0BDZGH33K"
+    },
+    {
+     "h": "Category+parent",
+     "formula": "W Sets Zip 320",
+     "value": "W Sets Zip 320"
+    },
+    {
+     "h": "Color",
+     "formula": "320 Black",
+     "value": "320 Black"
+    },
+    {
+     "h": "Размер",
+     "formula": "1X-Small",
+     "value": "1X-Small"
+    },
+    {
+     "h": "",
+     "formula": "=if(VLOOKUP(S2171,W:W,1,0)=S2171,\"да\",\"нет\")",
+     "value": "#N/A (Did not find value 'B0BDZGH33K' in VLOOKUP evaluation.)"
+    },
+    {
+     "h": "Reorder US",
+     "formula": "Да",
+     "value": "Да"
+    },
+    {
+     "h": "Account",
+     "formula": "=VLOOKUP(T2171,'accounts transfer'!A:B,2,0)",
+     "value": "MERINO-TECH"
+    },
+    {
+     "h": "",
+     "formula": "=IFERROR(VLOOKUP(S2171,'Pivot Table AWD'!A:E,5,0),0)",
+     "value": 47
+    },
+    {
+     "h": "RESTOCK",
+     "formula": "=L2171-H2171-AA2171",
+     "value": 176
+    },
+    {
+     "h": "% plan Q4",
+     "formula": "=IF(Y2171=$Y$2,(I2171+J2171)/L2171,\" \")",
+     "value": 0.7382978723404255
+    },
+    {
+     "h": "%  Available OCT",
+     "formula": "=IF(Y2171=$Y$2,AL2171/M2171,\" \")",
+     "value": 2.0729166666666665
+    },
+    {
+     "h": "% plan OCT (Inbound+FC Transfer+FC Processing+Available)",
+     "formula": "=IF(Y2171=$Y$2,(I2171+J2171)/M2171,\" \")",
+     "value": 3.6145833333333335
+    },
+    {
+     "h": "",
+     "formula": "=IF(Y2171=$Y$2,if(J2171>M2171,\"\",M2171-J2171))",
+     "value": ""
+    },
+    {
+     "h": "%  Plan 10-11'26",
+     "formula": "=IF(Y2171=$Y$2,(I2171+J2171)/(M2171+N2171),\" \")",
+     "value": 1.226148409893993
+    },
+    {
+     "h": "Available in AWD",
+     "formula": "=IFERROR(VLOOKUP(S2171,'Pivot Table AWD'!A:B,2,0),0)",
+     "value": 25
+    },
+    {
+     "h": "",
+     "formula": "=if(L2171-J2171-I2171<0,\"OK\",L2171-J2171-I2171)",
+     "value": 123
+    },
+    {
+     "h": "Available old asin ",
+     "formula": "=IFERROR(VLOOKUP(AJ2171,'Pivot Table stock amazon'!B:I,4,0),\"0\")",
+     "value": "0"
+    },
+    {
+     "h": "Available New+ Old asin ",
+     "formula": "=J2171+AK2171",
+     "value": 199
+    },
+    {
+     "h": "RESTOCK? ",
+     "formula": "=IF(Y2171=Y$2, IF(G2171*0.7>AL2171,AL2171-G2171*0.7,\"OK\"),\"OK\")",
+     "value": "OK"
+    },
+    {
+     "h": "%  Available REST OCT + NOV + DEC",
+     "formula": "=IF(Y2171=$Y$2,J2171/(M2171*(1-$AN$3)+N2171+O2171),\" \")",
+     "value": 0.471563981042654
+    },
+    {
+     "h": "Plan  REST OCT + NOV + DEC",
+     "formula": "=M2171*(1-$AN$3)+N2171+O2171",
+     "value": 422
+    },
+    {
+     "h": "%  Total REST OCT + NOV + DEC",
+     "formula": "=IF(Y2171=$Y$2,H2171/(M2171*(1-$AN$3)+N2171+O2171),\" \")",
+     "value": 0.5853080568720379
+    },
+    {
+     "h": "Available in AWD (units)",
+     "formula": "=iferror(VLOOKUP(A2171,AWD!K:L,2,0),0)",
+     "value": 25
+    },
+    {
+     "h": "Inbound to AWD (units)",
+     "formula": "=iferror(VLOOKUP(A2171,AWD!K:N,4,0),0)",
+     "value": 121
+    },
+    {
+     "h": "Outbound to FBA (units)",
+     "formula": "=iferror(VLOOKUP(S2171,AWD!K:P,6,0),0)",
+     "value": 47
+    },
+    {
+     "h": "",
+     "formula": "=O2171-R2171-H2171-AQ2171-AR2171-AS2171",
+     "value": -253
+    },
+    {
+     "h": "",
+     "formula": "=if(AT2171<-1,\"OK;\",AT2171)",
+     "value": "OK;"
+    },
+    {
+     "h": "Can restock",
+     "formula": "=IF(or(R2171>0,AQ2171>0),\"Can restock\")",
+     "value": "Can restock"
+    },
+    {
+     "h": "сент.2026",
+     "formula": 9,
+     "value": 9
+    },
+    {
+     "h": "продажи 12 month ",
+     "formula": 516,
+     "value": 516
+    },
+    {
+     "h": "Новинка?",
+     "formula": "=if(AX2171>0,\"Old\",\"New\")",
+     "value": "Old"
+    }
+   ]
+  }
+ ]
+}
