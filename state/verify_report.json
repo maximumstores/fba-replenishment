@@ -1,0 +1,50 @@
+{
+ "tabs": {
+  "US · Аут сейчас": {
+   "rows": 1468,
+   "duplicate_asins": 0,
+   "mismatch_vs_fresh": 0,
+   "mismatch_examples": [],
+   "nina": {
+    "B09C4K26BS": {
+     "sheet": [
+      "0",
+      "45"
+     ],
+     "nina": [
+      0,
+      45
+     ]
+    }
+   }
+  },
+  "US · Рест на 2 мес": {
+   "rows": 552,
+   "duplicate_asins": 0,
+   "mismatch_vs_fresh": 0,
+   "mismatch_examples": [],
+   "nina": {
+    "B09C4K26BS": {
+     "sheet": [
+      "0",
+      "45"
+     ],
+     "nina": [
+      0,
+      45
+     ]
+    },
+    "B0H6SW4BX8": {
+     "sheet": [
+      "40",
+      "72"
+     ],
+     "nina": [
+      40,
+      71
+     ]
+    }
+   }
+  }
+ }
+}
