@@ -53,3 +53,13 @@ def test_inactive_asins_are_dropped():
     dim = pd.DataFrame({"asin": ["B0AAAAAAA1", "B0BBBBBBB2"], "ab": ["A", "A"], "category": ["x", "x"], "color": ["c", "c"], "size": ["L", "L"],
                         "cogs": [1.0, 1.0], "active_de": [True, False]})
     assert list(ms.build_market("DE", stock, dim, None)["asin"]) == ["B0AAAAAAA1"]
+
+
+def test_parse_hopted_dedupes_same_fnsku_and_counts_fc_reserved():
+    hdr = ["Hopted ID", "ASIN", "SKU", "FNSKU", "FBA fulfillable quantity", "FBA inbound receiving quantity",
+           "FBA inbound shipped quantity", "FBA inbound working quantity", "Reserved FC Transfer", "Reserved FC Processing"]
+    rows = [hdr,
+            ["h1", "B09C4K26BS", "S-M", "B09C4K26BS", "0", "1", "40", "0", "2", "2"],
+            ["h2", "B09C4K26BS", "S-M-2", "B09C4K26BS", "0", "1", "40", "0", "2", "2"]]
+    out = market_stock.parse_hopted(rows)
+    assert out.loc[0, "inbound"] == 45 and out.loc[0, "available"] == 0

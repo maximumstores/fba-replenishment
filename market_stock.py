@@ -41,10 +41,18 @@ def parse_hopted(rows: list[list], codes: set[str] | None = None) -> pd.DataFram
     if codes and col("Marketplace Country Code") is not None:
         df = df[df[col("Marketplace Country Code")].astype(str).str.strip().str.upper().isin(codes)]
     out = pd.DataFrame({"asin": df[asin].astype(str).str.strip().str.upper(), "available": df[ful].map(_num)})
+    # Inbound как у Нины: receiving + shipped + working + Reserved FC Transfer + Reserved FC Processing
     out["inbound"] = sum(df[col(n)].map(_num) if col(n) is not None else 0.0
-                         for n in ("FBA inbound receiving quantity", "FBA inbound shipped quantity", "FBA inbound working quantity"))
+                         for n in ("FBA inbound receiving quantity", "FBA inbound shipped quantity", "FBA inbound working quantity",
+                                   "Reserved FC Transfer", "Reserved FC Processing"))
     out["days_supply"] = df[col("Days of supply")].map(_num) if col("Days of supply") is not None else 0.0
+    # Один FNSKU под несколькими SKU Amazon показывает одним и тем же остатком в каждой строке: берём максимум, а не сумму
+    fn, sku = col("FNSKU"), col("SKU")
+    key = (df[fn] if fn is not None else df[sku] if sku is not None else out["asin"]).astype(str).str.strip().str.upper()
+    out["fnsku"] = key.where(key.ne("") & key.ne("NAN") & key.ne("NONE"), out["asin"])
     out = out[out["asin"].str.fullmatch(r"B0[A-Z0-9]{8}")]
+    out = out.groupby(["asin", "fnsku"], as_index=False).agg(
+        available=("available", "max"), inbound=("inbound", "max"), days_supply=("days_supply", "max"))
     return out.groupby("asin", as_index=False).agg(available=("available", "sum"), inbound=("inbound", "sum"),
                                                    days_supply=("days_supply", "max"))
 
