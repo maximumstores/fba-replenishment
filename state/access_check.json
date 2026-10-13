@@ -330,9 +330,11 @@
  },
  "Sales plan +Reorder DE": {
   "ok": true,
-  "tabs": 15,
+  "tabs": 17,
   "tab_names": [
    "исходник",
+   "фільтри",
+   "SPR",
    "Сводная таблица 46",
    "order",
    "order total",
@@ -351,9 +353,11 @@
  },
  "Sales plan +Reorder UK": {
   "ok": true,
-  "tabs": 12,
+  "tabs": 14,
   "tab_names": [
    "исходник",
+   "фільтри",
+   "SPR",
    "Order",
    "Order total",
    "SALES % NOV",
@@ -368,8 +372,15 @@
   ]
  },
  "Plan Sales 2025 CA": {
-  "ok": false,
-  "error": "PermissionError: "
+  "ok": true,
+  "tabs": 5,
+  "tab_names": [
+   "Orders+Stock",
+   "Sales",
+   "Plan Sales",
+   "Stock Start",
+   "Margin"
+  ]
  },
  "Reorder for summer'27": {
   "ok": false,
