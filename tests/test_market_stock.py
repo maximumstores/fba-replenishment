@@ -63,3 +63,13 @@ def test_parse_hopted_dedupes_same_fnsku_and_counts_fc_reserved():
             ["h2", "B09C4K26BS", "S-M-2", "B09C4K26BS", "0", "1", "40", "0", "2", "2"]]
     out = ms.parse_hopted(rows)
     assert out.loc[0, "inbound"] == 45 and out.loc[0, "available"] == 0
+
+
+def test_parse_hopted_sums_stores_but_dedupes_inside_store():
+    hdr = ["Hopted ID", "ASIN", "SKU", "FNSKU", "Store name", "FBA fulfillable quantity"]
+    rows = [hdr,
+            ["1", "B09C4K26BS", "a", "X1", "MERINO-TECH", "10"],
+            ["2", "B09C4K26BS", "b", "X1", "MERINO-TECH", "10"],
+            ["3", "B09C4K26BS", "c", "X1", "SPORTACUS", "5"]]
+    out = ms.parse_hopted(rows)
+    assert out.loc[0, "available"] == 15

@@ -46,12 +46,15 @@ def parse_hopted(rows: list[list], codes: set[str] | None = None) -> pd.DataFram
                          for n in ("FBA inbound receiving quantity", "FBA inbound shipped quantity", "FBA inbound working quantity",
                                    "Reserved FC Transfer", "Reserved FC Processing"))
     out["days_supply"] = df[col("Days of supply")].map(_num) if col("Days of supply") is not None else 0.0
-    # Один FNSKU под несколькими SKU Amazon показывает одним и тем же остатком в каждой строке: берём максимум, а не сумму
+    # Один FNSKU под несколькими SKU внутри аккаунта Amazon показывает одним и тем же остатком в каждой строке: берём максимум; аккаунты потом суммируем
     fn, sku = col("FNSKU"), col("SKU")
     key = (df[fn] if fn is not None else df[sku] if sku is not None else out["asin"]).astype(str).str.strip().str.upper()
     out["fnsku"] = key.where(key.ne("") & key.ne("NAN") & key.ne("NONE"), out["asin"])
+    st = col("Store name")
+    out["store"] = df[st].astype(str).str.strip() if st is not None else ""
     out = out[out["asin"].str.fullmatch(r"B0[A-Z0-9]{8}")]
-    out = out.groupby(["asin", "fnsku"], as_index=False).agg(
+    # внутри одного Amazon-аккаунта дубли FNSKU схлопываем, а аккаунты (Store name) суммируем
+    out = out.groupby(["store", "asin", "fnsku"], as_index=False).agg(
         available=("available", "max"), inbound=("inbound", "max"), days_supply=("days_supply", "max"))
     return out.groupby("asin", as_index=False).agg(available=("available", "sum"), inbound=("inbound", "sum"),
                                                    days_supply=("days_supply", "max"))
