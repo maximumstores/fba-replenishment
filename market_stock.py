@@ -106,4 +106,13 @@ def load_markets(markets: tuple[str, ...] = ("US", "CA", "DE", "UK")) -> dict[st
         table, codes = MARKETS[m]
         rows = loaders._bq_frame_to_rows(loaders._bq_query(f"SELECT * FROM `{p}.mt.{table}`"))
         result[m] = build_market(m, parse_hopted(rows, codes), dim, demand if m == "US" else None)
+        if m == "CA":  # остатки — Hopted, план и цена — таблица Нины по ASIN
+            try:
+                import nina_sheet
+                ca = nina_sheet.load_ca_plan().drop_duplicates("asin").set_index("asin")
+                df = result[m]
+                df["demand_2m"] = df["asin"].map(ca["demand_2m"]).fillna(0.0)
+                df["price_eur"] = df["asin"].map(ca["price_eur"]).fillna(0.0)
+            except Exception as exc:
+                print(f"[warn] план CA недоступен ({exc}); CA считаю по Hopted без плана")
     return result

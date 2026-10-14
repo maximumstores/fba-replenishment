@@ -16,7 +16,8 @@ import loaders
 import restock_report as rr
 
 STOCK_SHEET_DEFAULT = "1XKUoiKUa8aF0DT7pNgXRqEvlejVu_FYVpMRPyGcOlLI"
-TABS = {"DE": "Order DE", "UK": "Orders UK"}
+CA_SHEET_DEFAULT = "1FRP8eWrJRNraSeua1kJn_rki9H4XshUdiKRMw9w8QnA"  # «CA Stock Amazon Merino-Elita»
+TABS = {"DE": "Order DE", "UK": "Orders UK", "CA": "Orders"}  # CA: вкладка «Orders» без пробела (рабочая, с ценой и планом)
 ASIN_RE = re.compile(r"B0[A-Z0-9]{8}")
 
 
@@ -65,7 +66,8 @@ def parse_orders(header: list, rows: list[list], market: str, plan: str = "rest"
 
 def read_tab(book, tab: str) -> tuple[list, list[list]]:
     sheets = book.worksheets()
-    ws = next((w for w in sheets if loaders._norm_tab(w.title) == loaders._norm_tab(tab)), None)
+    ws = next((w for w in sheets if w.title == tab), None) or \
+        next((w for w in sheets if loaders._norm_tab(w.title) == loaders._norm_tab(tab)), None)
     if ws is None:
         raise ValueError(f"Нет вкладки «{tab}» в файле Нины")
     header = ws.get("A1:AZ1", value_render_option="FORMATTED_VALUE")[0]
@@ -86,3 +88,11 @@ def load_nina(markets: tuple[str, ...] = ("DE", "UK")) -> dict[str, pd.DataFrame
         price = de.drop_duplicates("asin").set_index("asin")["price_eur"]
         result["UK"]["price_eur"] = result["UK"]["asin"].map(price).fillna(0.0)
     return result
+
+
+def load_ca_plan() -> pd.DataFrame:
+    """CA: план на 2 мес (Oct+Nov — две колонки после Available) и цена по ASIN из вкладки «Orders» файла CA Stock Amazon Merino-Elita.
+    Остатки CA берём из Hopted (так решил Сергей), из таблицы Нины — только план и цена."""
+    book = loaders._gspread_book("sheet:" + os.getenv("NINA_CA_SHEET", CA_SHEET_DEFAULT))
+    header, rows = read_tab(book, TABS["CA"])
+    return parse_orders(header, rows, "CA", plan="months")[["asin", "demand_2m", "price_eur"]]

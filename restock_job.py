@@ -23,9 +23,9 @@ import tg_subscribers
 STATE_FILE = Path("state/restock_state.json")
 SHEET_URL = "https://docs.google.com/spreadsheets/d/{id}/edit"
 CURRENCY = {"US": "$", "CA": "CAD", "UK": "€", "DE": "€"}  # UK-деньги считаем по цене DE (€), пока нет UK-цены
-HAS_PLAN = {"US", "DE", "UK"}  # план на 2 мес: US — BigQuery plan_sales, DE/UK — вкладки Нины
-REAL_PRICE = {"DE", "UK"}  # деньги по цене из таблицы Нины (UK — цена DE); у US/CA пока себестоимость
-BASIS = {"DE": " (по цене Нины)", "UK": " (цена DE, ориентир)"}
+HAS_PLAN = {"US", "CA", "DE", "UK"}  # план на 2 мес: US — BigQuery plan_sales, DE/UK — вкладки Нины
+REAL_PRICE = {"CA", "DE", "UK"}  # деньги по цене из таблицы Нины (UK — цена DE); у US/CA пока себестоимость
+BASIS = {"CA": " (по цене Нины)", "DE": " (по цене Нины)", "UK": " (цена DE, ориентир)"}
 
 
 def open_book(sheet_id: str):
