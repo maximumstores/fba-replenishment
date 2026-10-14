@@ -73,3 +73,19 @@ def test_parse_hopted_sums_stores_but_dedupes_inside_store():
             ["3", "B09C4K26BS", "c", "X1", "SPORTACUS", "5"]]
     out = ms.parse_hopted(rows)
     assert out.loc[0, "available"] == 15
+
+
+def test_merge_old_asins_adds_old_stock_to_new_and_drops_old():
+    stock = pd.DataFrame({"asin": ["B0NEWAAAA1", "B0OLDAAAA1", "B0OTHER001"], "available": [0.0, 30.0, 5.0],
+                          "inbound": [0.0, 10.0, 0.0], "days_supply": [0, 0, 0]})
+    dim = pd.DataFrame({"asin": ["B0NEWAAAA1", "B0OTHER001"], "old_asin": ["B0OLDAAAA1", None]})
+    out = ms.merge_old_asins(stock, dim).set_index("asin")
+    assert out.loc["B0NEWAAAA1", "available"] == 30 and out.loc["B0NEWAAAA1", "inbound"] == 10
+    assert "B0OLDAAAA1" not in out.index and out.loc["B0OTHER001", "available"] == 5
+
+
+def test_merge_old_asins_new_without_own_stock_row():
+    stock = pd.DataFrame({"asin": ["B0OLDAAAA1"], "available": [7.0], "inbound": [0.0], "days_supply": [0]})
+    dim = pd.DataFrame({"asin": ["B0NEWAAAA1"], "old_asin": ["B0OLDAAAA1"]})
+    out = ms.merge_old_asins(stock, dim).set_index("asin")
+    assert out.loc["B0NEWAAAA1", "available"] == 7 and "B0OLDAAAA1" not in out.index

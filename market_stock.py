@@ -60,7 +60,7 @@ def parse_hopted(rows: list[list], codes: set[str] | None = None) -> pd.DataFram
                                                    days_supply=("days_supply", "max"))
 
 
-DIM_SQL = """SELECT d.asin, COALESCE(NULLIF(d.ab_winter_a,''), NULLIF(d.abcd_class,''), '') AS ab, d.category, d.color, d.size,
+DIM_SQL = """SELECT d.asin, d.old_asin, COALESCE(NULLIF(d.ab_winter_a,''), NULLIF(d.abcd_class,''), '') AS ab, d.category, d.color, d.size,
        c.avg_cogs AS cogs, d.active_us, d.active_ca, d.active_de, d.active_uk
 FROM `{p}.forecast.dim_product` d LEFT JOIN `{p}.forecast.group_cogs` c USING (group_key)"""
 DEMAND_SQL = """SELECT asin, SUM(plan_units) AS demand_2m FROM `{p}.forecast.plan_sales`
@@ -68,8 +68,38 @@ WHERE month >= DATE_TRUNC(CURRENT_DATE(), MONTH) AND month < DATE_ADD(DATE_TRUNC
 GROUP BY asin"""
 
 
+def merge_old_asins(stock: pd.DataFrame, dim: pd.DataFrame) -> pd.DataFrame:
+    """Перелистинг: старый и новый ASIN — один товар. Сток и inbound старого ASIN прибавляем к новому, старый из списка убираем.
+    Иначе новый ASIN выглядит как аут, хотя товар лежит под старым (и наоборот — старый шумит ложным аутом)."""
+    if "old_asin" not in dim.columns:
+        return stock
+    pairs = dim[["asin", "old_asin"]].dropna()
+    pairs = pairs[(pairs["asin"].str.upper() != "NEW") & (pairs["old_asin"].str.upper() != pairs["asin"].str.upper())]
+    pairs = pairs.drop_duplicates("asin")
+    if pairs.empty:
+        return stock
+    s = stock.set_index("asin")
+    cols = [c for c in ("available", "inbound") if c in s.columns]
+    add = pairs.assign(**{c: pairs["old_asin"].map(s[c]) for c in cols}).dropna(subset=cols, how="all").fillna({c: 0.0 for c in cols})
+    add = add[add[cols].sum(axis=1) > 0].groupby("asin", as_index=False)[cols].sum()
+    out = stock.copy()
+    old_set = set(pairs["old_asin"])
+    # прибавляем сток старого к новому
+    out = out.set_index("asin")
+    for _, r in add.iterrows():
+        if r["asin"] in out.index:
+            for c in cols:
+                out.loc[r["asin"], c] = out.loc[r["asin"], c] + r[c]
+        else:
+            out.loc[r["asin"], cols] = [r[c] for c in cols]
+    out = out.fillna({c: 0.0 for c in out.columns if c != "asin"}).reset_index()
+    # старые ASIN, у которых есть новый наследник, в отчёт не идут
+    return out[~out["asin"].isin(old_set)].reset_index(drop=True)
+
+
 def build_market(market: str, stock: pd.DataFrame, dim: pd.DataFrame, demand: pd.DataFrame | None) -> pd.DataFrame:
     """Склеивает остатки, справочник и (если есть) спрос в нормализованный вид. Цена = себестоимость группы (прокси)."""
+    stock = merge_old_asins(stock, dim)
     df = stock.merge(dim.drop_duplicates("asin"), on="asin", how="left")
     flag = f"active_{market.lower()}"
     if flag in df.columns:  # в отчёт только ASIN, активные на этом рынке (в Hopted много старых и выведенных)
