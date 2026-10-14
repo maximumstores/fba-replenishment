@@ -15,6 +15,7 @@ FILES = {
     "Sales plan +Reorder DE": "1mfvv2zIq7YlnsbWfHtwtajR2Ic4RCwChPODbLxqIiAE",
     "Sales plan +Reorder UK": "1Mv1a0sxy_TqaPHxgB1_rMu9EUQK03oCzAu8GuBg0M7g",
     "Plan Sales 2025 CA": "1v5QvwvchtYC0OnEGAzHZdlkf6Hmd6GHbp0_9NcxrUj0",
+    "Stock CA": "1FRP8eWrJRNraSeua1kJn_rki9H4XshUdiKRMw9w8QnA",
     "Reorder for summer'27": "1hNfTvZedPygVhlRuJhKfBKujcEgh0eQbxTpj_l8mLcY",
 }
 PROBE = {"Stock Amazon Merino": "Orders", "Stock UK-DE": "Order DE", "Sales plan +Reorder US": "Margin"}
