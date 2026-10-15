@@ -43,3 +43,25 @@ def test_text_numbers_with_comma_and_euro():
 def test_missing_columns_raise():
     with pytest.raises(ValueError):
         ns.parse_orders(["a", "b"], [], "DE")
+
+
+def test_parse_us_plan_two_months_text_and_dupes():
+    from datetime import date
+    import nina_sheet as ns
+    hdr = ["ASIN", "Plan 9'26", "Plan 10'26", "Plan 11'26", "Plan 12'26"]
+    rows = [["B0AAAAAAA1", 5, 864, "2\xa0204", 7],
+            ["B0AAAAAAA2", 0, "10", 20, 0],
+            ["B0AAAAAAA1", 0, 1, 1, 0],          # дубль ASIN (старая строка) — берём большее
+            ["total", 1, 1, 1, 1]]
+    df = ns.parse_us_plan(hdr, rows, today=date(2026, 10, 15)).set_index("asin")["demand_2m"]
+    assert df["B0AAAAAAA1"] == 3068 and df["B0AAAAAAA2"] == 30 and len(df) == 2
+
+
+def test_parse_us_plan_year_wrap_and_missing():
+    from datetime import date
+    import pytest
+    import nina_sheet as ns
+    hdr = ["ASIN", "Plan 12'26", "Plan 1'27"]
+    assert ns.parse_us_plan(hdr, [["B0AAAAAAA1", 3, 4]], today=date(2026, 12, 2)).iloc[0]["demand_2m"] == 7
+    with pytest.raises(ValueError):
+        ns.parse_us_plan(hdr, [["B0AAAAAAA1", 3, 4]], today=date(2026, 10, 2))

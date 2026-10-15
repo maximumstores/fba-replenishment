@@ -136,6 +136,13 @@ def load_markets(markets: tuple[str, ...] = ("US", "CA", "DE", "UK")) -> dict[st
         table, codes = MARKETS[m]
         rows = loaders._bq_frame_to_rows(loaders._bq_query(f"SELECT * FROM `{p}.mt.{table}`"))
         result[m] = build_market(m, parse_hopted(rows, codes), dim, demand if m == "US" else None)
+        if m == "US":  # план — вкладка Orders Нины (Plan M'YY за 2 мес), остальное (сток, цена) как было
+            try:
+                import nina_sheet
+                us = nina_sheet.load_us_plan().drop_duplicates("asin").set_index("asin")
+                result[m]["demand_2m"] = result[m]["asin"].map(us["demand_2m"]).fillna(0.0)
+            except Exception as exc:
+                print(f"[warn] план US из Нины недоступен ({exc}); US считаю по плану из BigQuery")
         if m == "CA":  # остатки — Hopted, план и цена — таблица Нины по ASIN
             try:
                 import nina_sheet

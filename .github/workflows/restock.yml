@@ -3,7 +3,12 @@ name: FBA restock report (US/CA/DE/UK)
 on:
   schedule:
     - cron: "30 6 * * 1-5"   # будни 06:30 UTC = 09:30 Киев (после ночной загрузки Hopted)
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      silent:
+        description: "Обновить таблицу без сообщения в Telegram"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -25,7 +30,7 @@ jobs:
           RESTOCK_REPORT_SHEET: ${{ vars.RESTOCK_REPORT_SHEET }}
           DASHBOARD_URL: ${{ vars.DASHBOARD_URL }}
           BQ_PROJECT: reorder-497714
-        run: python restock_job.py --always
+        run: python restock_job.py --always ${{ inputs.silent && '--no-telegram' || '' }}
       - name: Save state
         run: |
           git config user.name "fba-alert-bot"

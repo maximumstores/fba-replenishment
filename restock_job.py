@@ -63,6 +63,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--always", action="store_true", help="слать сводку, даже если список не изменился")
+    ap.add_argument("--no-telegram", action="store_true", help="обновить таблицу и состояние, но ничего не слать")
     ap.add_argument("--markets", default="US,CA,DE,UK")
     a = ap.parse_args(argv)
 
@@ -93,6 +94,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if a.dry_run:
         print(msg + "\n\n[dry-run: ничего не записано и не отправлено]")
+        return 0
+    if a.no_telegram:
+        rr.save_state(STATE_FILE, state)
+        print("Таблица обновлена, Telegram пропущен (--no-telegram).")
         return 0
     if not changed and not a.always:
         print("Списки не изменились, сообщение не отправляю.")

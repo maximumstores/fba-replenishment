@@ -17,6 +17,7 @@ import restock_report as rr
 
 STOCK_SHEET_DEFAULT = "1XKUoiKUa8aF0DT7pNgXRqEvlejVu_FYVpMRPyGcOlLI"
 CA_SHEET_DEFAULT = "1FRP8eWrJRNraSeua1kJn_rki9H4XshUdiKRMw9w8QnA"  # «CA Stock Amazon Merino-Elita»
+US_SHEET_DEFAULT = "1acpHlfBiJjFm96VmFksRmKTnktULTgmu7iESYFDLUZw"  # «Stock Amazon Merino» (US), вкладка Orders
 TABS = {"DE": "Order DE", "UK": "Orders UK", "CA": "Orders"}  # CA: вкладка «Orders» без пробела (рабочая, с ценой и планом)
 ASIN_RE = re.compile(r"B0[A-Z0-9]{8}")
 
@@ -62,6 +63,53 @@ def parse_orders(header: list, rows: list[list], market: str, plan: str = "rest"
     # один ASIN может стоять в нескольких строках (старые/новые) — берём строку с большим планом
     df = df.sort_values("demand_2m", ascending=False).drop_duplicates("asin").reset_index(drop=True)
     return df[df["demand_2m"] > 0].reset_index(drop=True)  # без плана ASIN в отчёты не попадает
+
+
+def _num_text(v) -> float:
+    """Число из ячейки, в т.ч. текстом с пробелом тысяч: '2 204' -> 2204 (у Нины часть плана записана текстом)."""
+    if isinstance(v, (int, float)):
+        return float(v)
+    t = re.sub(r"[^0-9.,-]", "", str(v)).replace(",", ".")
+    try:
+        return float(t) if t not in ("", "-", ".") else 0.0
+    except ValueError:
+        return 0.0
+
+
+def parse_us_plan(header: list, rows: list[list], today=None) -> pd.DataFrame:
+    """US, вкладка Orders: план на 2 мес = колонки «Plan M'YY» текущего и следующего месяца (ищем по шапке).
+    Один ASIN в нескольких строках (старый/новый) — берём большее значение."""
+    from datetime import date
+
+    today = today or date.today()
+    want = []
+    y, m = today.year, today.month
+    for _ in range(2):
+        want.append((m, y % 100))
+        m, y = (1, y + 1) if m == 12 else (m + 1, y)
+    pat = re.compile(r"^plan(\d{1,2})'(\d{2})$")
+    cols = {}
+    for i, c in enumerate(header):
+        mt = pat.match(re.sub(r"\s+", "", str(c).replace("\xa0", " ")).lower())
+        if mt:
+            cols[(int(mt.group(1)), int(mt.group(2)))] = i
+    missing = [k for k in want if k not in cols]
+    if missing:
+        raise ValueError(f"Orders (US): нет колонок плана за {missing}")
+    plan: dict[str, float] = {}
+    for r in rows:
+        asin = str(r[0]).strip().upper() if r else ""
+        if not ASIN_RE.fullmatch(asin):
+            continue
+        v = sum(_num_text(r[cols[k]]) if cols[k] < len(r) else 0.0 for k in want)
+        plan[asin] = max(plan.get(asin, 0.0), v)
+    return pd.DataFrame({"asin": list(plan), "demand_2m": [max(v, 0.0) for v in plan.values()]})
+
+
+def load_us_plan() -> pd.DataFrame:
+    book = loaders._gspread_book("sheet:" + os.getenv("NINA_US_SHEET", US_SHEET_DEFAULT))
+    header, rows = read_tab(book, "Orders")
+    return parse_us_plan(header, rows)
 
 
 def read_tab(book, tab: str) -> tuple[list, list[list]]:
