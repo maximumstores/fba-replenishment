@@ -1,77 +1,77 @@
 {
- "asin": "B0BDZGH33K",
+ "asin": "B0BDZND1XQ",
  "rows": [
-  2171
+  2496
  ],
  "tab": "Orders ",
  "cells": [
   {
-   "row": 2171,
+   "row": 2496,
    "cols": [
     {
      "h": "ASIN",
-     "formula": "B0BDZGH33K",
-     "value": "B0BDZGH33K"
+     "formula": "B0BDZND1XQ",
+     "value": "B0BDZND1XQ"
     },
     {
      "h": "",
-     "formula": "=VLOOKUP(A2171,D:D,1,0)",
-     "value": "#N/A (Did not find value 'B0BDZGH33K' in VLOOKUP evaluation.)"
+     "formula": "=VLOOKUP(A2496,D:D,1,0)",
+     "value": "#N/A (Did not find value 'B0BDZND1XQ' in VLOOKUP evaluation.)"
     },
     {
      "h": "RESTOCK? ",
-     "formula": "=IF(Y2171=Y$2, IF(G2171*0.7>J2171,J2171-G2171*0.7,\"OK\"),\"OK\")",
+     "formula": "=IF(Y2496=Y$2, IF(G2496*0.7>J2496,J2496-G2496*0.7,\"OK\"),\"OK\")",
      "value": "OK"
     },
     {
      "h": "RESTOCK!!!!!",
-     "formula": "=IF(Y2171=Y$2, IF(G2171*$G$4/31>J2171+I2171,J2171+I2171-G2171*$G$4/31,\"OK\"),\"OK\")",
+     "formula": "=IF(Y2496=Y$2, IF(G2496*$G$4/31>J2496+I2496,J2496+I2496-G2496*$G$4/31,\"OK\"),\"OK\")",
      "value": "OK"
     },
     {
      "h": "Plan Oct",
-     "formula": "=M2171",
-     "value": 96
+     "formula": "=M2496",
+     "value": 864
     },
     {
      "h": "Total Quantity",
-     "formula": "=IFERROR(VLOOKUP(A2171,'Pivot Table stock amazon'!B:I,2,0),\"0\")",
-     "value": 247
+     "formula": "=IFERROR(VLOOKUP(A2496,'Pivot Table stock amazon'!B:I,2,0),\"0\")",
+     "value": 3388
     },
     {
      "h": "Inbound+FC Transfer+FC Processing",
-     "formula": "=IFERROR(VLOOKUP(A2171,'Pivot Table stock amazon'!B:I,3,0),\"0\")+IFERROR(VLOOKUP(A2171,'Pivot Table stock amazon'!B:I,5,0),\"0\")+IFERROR(VLOOKUP(A2171,'Pivot Table stock amazon'!B:I,6,0),\"0\")",
-     "value": 148
+     "formula": "=IFERROR(VLOOKUP(A2496,'Pivot Table stock amazon'!B:I,3,0),\"0\")+IFERROR(VLOOKUP(A2496,'Pivot Table stock amazon'!B:I,5,0),\"0\")+IFERROR(VLOOKUP(A2496,'Pivot Table stock amazon'!B:I,6,0),\"0\")",
+     "value": 2740
     },
     {
      "h": "Available",
-     "formula": "=IFERROR(VLOOKUP(A2171,'Pivot Table stock amazon'!B:I,4,0),\"0\")",
-     "value": 199
+     "formula": "=IFERROR(VLOOKUP(A2496,'Pivot Table stock amazon'!B:I,4,0),\"0\")",
+     "value": 1816
     },
     {
      "h": "Rstock Q4",
-     "formula": "=if(J2171+I2171-L2171<0,J2171+I2171-L2171,\"OK\")",
-     "value": -123
+     "formula": "=if(J2496+I2496-L2496<0,J2496+I2496-L2496,\"OK\")",
+     "value": "OK"
     },
     {
      "h": "PLAN Q4",
-     "formula": "=SUM(M2171:O2171)",
-     "value": 470
+     "formula": "=SUM(M2496:O2496)",
+     "value": 864
     },
     {
      "h": "Plan 10'26",
-     "formula": 96,
-     "value": 96
+     "formula": 864,
+     "value": 864
     },
     {
      "h": "Plan 11'26",
-     "formula": 187,
-     "value": 187
+     "formula": "2 204",
+     "value": "2 204"
     },
     {
      "h": "Plan 12'26",
-     "formula": 187,
-     "value": 187
+     "formula": "2 004",
+     "value": "2 004"
     },
     {
      "h": "A/B category+color for winter'25-'26",
@@ -80,23 +80,23 @@
     },
     {
      "h": "Fulfillment-BOX TX",
-     "formula": "=IFERROR(\n  VLOOKUP(\n    A2171,\n    IF(\n      $Q$1=\"Fulfillment-BOX CA\",\n      'pivot Warehouses FFbox'!A:B,\n      IF(\n        $Q$1=\"Fulfillment-BOX DE\",\n        'pivot Warehouses FFbox'!D:E,\n        IF(\n          $Q$1=\"Fulfillment-BOX FL\",\n          'pivot Warehouses FFbox'!G:H,\n          IF(\n            $Q$1=\"Fulfillment-BOX TX\",\n            'pivot Warehouses FFbox'!J:K,\n            {}\n          )\n        )\n      )\n    ),\n    2,\n    FALSE\n  ),\n  0)",
+     "formula": "=IFERROR(\n  VLOOKUP(\n    A2496,\n    IF(\n      $Q$1=\"Fulfillment-BOX CA\",\n      'pivot Warehouses FFbox'!A:B,\n      IF(\n        $Q$1=\"Fulfillment-BOX DE\",\n        'pivot Warehouses FFbox'!D:E,\n        IF(\n          $Q$1=\"Fulfillment-BOX FL\",\n          'pivot Warehouses FFbox'!G:H,\n          IF(\n            $Q$1=\"Fulfillment-BOX TX\",\n            'pivot Warehouses FFbox'!J:K,\n            {}\n          )\n        )\n      )\n    ),\n    2,\n    FALSE\n  ),\n  0)",
      "value": 0
     },
     {
      "h": "WRH QTY",
-     "formula": "=IFERROR(VLOOKUP(A2171,'Pivot Table warehouse'!A:B,2,0),0)",
-     "value": 0
+     "formula": "=IFERROR(VLOOKUP(A2496,'Pivot Table warehouse'!A:B,2,0),0)",
+     "value": 63
     },
     {
      "h": "ASIN",
-     "formula": "B0BDZGH33K",
-     "value": "B0BDZGH33K"
+     "formula": "B0BDZND1XQ",
+     "value": "B0BDZND1XQ"
     },
     {
      "h": "Category+parent",
-     "formula": "W Sets Zip 320",
-     "value": "W Sets Zip 320"
+     "formula": "Mens Sets 320",
+     "value": "Mens Sets 320"
     },
     {
      "h": "Color",
@@ -105,13 +105,13 @@
     },
     {
      "h": "Размер",
-     "formula": "1X-Small",
-     "value": "1X-Small"
+     "formula": "4Large",
+     "value": "4Large"
     },
     {
      "h": "",
-     "formula": "=if(VLOOKUP(S2171,W:W,1,0)=S2171,\"да\",\"нет\")",
-     "value": "#N/A (Did not find value 'B0BDZGH33K' in VLOOKUP evaluation.)"
+     "formula": "=if(VLOOKUP(S2496,W:W,1,0)=S2496,\"да\",\"нет\")",
+     "value": "#N/A (Did not find value 'B0BDZND1XQ' in VLOOKUP evaluation.)"
     },
     {
      "h": "Reorder US",
@@ -120,127 +120,127 @@
     },
     {
      "h": "Account",
-     "formula": "=VLOOKUP(T2171,'accounts transfer'!A:B,2,0)",
-     "value": "MERINO-TECH"
+     "formula": "=VLOOKUP(T2496,'accounts transfer'!A:B,2,0)",
+     "value": "eLeaf"
     },
     {
      "h": "",
-     "formula": "=IFERROR(VLOOKUP(S2171,'Pivot Table AWD'!A:E,5,0),0)",
-     "value": 47
+     "formula": "=IFERROR(VLOOKUP(S2496,'Pivot Table AWD'!A:E,5,0),0)",
+     "value": 925
     },
     {
      "h": "RESTOCK",
-     "formula": "=L2171-H2171-AA2171",
-     "value": 176
+     "formula": "=L2496-H2496-AA2496",
+     "value": -3449
     },
     {
      "h": "% plan Q4",
-     "formula": "=IF(Y2171=$Y$2,(I2171+J2171)/L2171,\" \")",
-     "value": 0.7382978723404255
+     "formula": "=IF(Y2496=$Y$2,(I2496+J2496)/L2496,\" \")",
+     "value": 5.273148148148148
     },
     {
      "h": "%  Available OCT",
-     "formula": "=IF(Y2171=$Y$2,AL2171/M2171,\" \")",
-     "value": 2.0729166666666665
+     "formula": "=IF(Y2496=$Y$2,AL2496/M2496,\" \")",
+     "value": 2.1018518518518516
     },
     {
      "h": "% plan OCT (Inbound+FC Transfer+FC Processing+Available)",
-     "formula": "=IF(Y2171=$Y$2,(I2171+J2171)/M2171,\" \")",
-     "value": 3.6145833333333335
+     "formula": "=IF(Y2496=$Y$2,(I2496+J2496)/M2496,\" \")",
+     "value": 5.273148148148148
     },
     {
      "h": "",
-     "formula": "=IF(Y2171=$Y$2,if(J2171>M2171,\"\",M2171-J2171))",
+     "formula": "=IF(Y2496=$Y$2,if(J2496>M2496,\"\",M2496-J2496))",
      "value": ""
     },
     {
      "h": "%  Plan 10-11'26",
-     "formula": "=IF(Y2171=$Y$2,(I2171+J2171)/(M2171+N2171),\" \")",
-     "value": 1.226148409893993
+     "formula": "=IF(Y2496=$Y$2,(I2496+J2496)/(M2496+N2496),\" \")",
+     "value": "#VALUE! (Function ADD parameter 2 expects number values. But '2 204' is a text and cannot be coerced to a number.)"
     },
     {
      "h": "Available in AWD",
-     "formula": "=IFERROR(VLOOKUP(S2171,'Pivot Table AWD'!A:B,2,0),0)",
-     "value": 25
+     "formula": "=IFERROR(VLOOKUP(S2496,'Pivot Table AWD'!A:B,2,0),0)",
+     "value": 1533
     },
     {
      "h": "",
-     "formula": "=if(L2171-J2171-I2171<0,\"OK\",L2171-J2171-I2171)",
-     "value": 123
+     "formula": "=if(L2496-J2496-I2496<0,\"OK\",L2496-J2496-I2496)",
+     "value": "OK"
     },
     {
      "h": "Available old asin ",
-     "formula": "=IFERROR(VLOOKUP(AJ2171,'Pivot Table stock amazon'!B:I,4,0),\"0\")",
+     "formula": "=IFERROR(VLOOKUP(AJ2496,'Pivot Table stock amazon'!B:I,4,0),\"0\")",
      "value": "0"
     },
     {
      "h": "Available New+ Old asin ",
-     "formula": "=J2171+AK2171",
-     "value": 199
+     "formula": "=J2496+AK2496",
+     "value": 1816
     },
     {
      "h": "RESTOCK? ",
-     "formula": "=IF(Y2171=Y$2, IF(G2171*0.7>AL2171,AL2171-G2171*0.7,\"OK\"),\"OK\")",
+     "formula": "=IF(Y2496=Y$2, IF(G2496*0.7>AL2496,AL2496-G2496*0.7,\"OK\"),\"OK\")",
      "value": "OK"
     },
     {
      "h": "%  Available REST OCT + NOV + DEC",
-     "formula": "=IF(Y2171=$Y$2,J2171/(M2171*(1-$AN$3)+N2171+O2171),\" \")",
-     "value": 0.471563981042654
+     "formula": "=IF(Y2496=$Y$2,J2496/(M2496*(1-$AN$3)+N2496+O2496),\" \")",
+     "value": "#VALUE! (Function ADD parameter 2 expects number values. But '2 204' is a text and cannot be coerced to a number.)"
     },
     {
      "h": "Plan  REST OCT + NOV + DEC",
-     "formula": "=M2171*(1-$AN$3)+N2171+O2171",
-     "value": 422
+     "formula": "=M2496*(1-$AN$3)+N2496+O2496",
+     "value": "#VALUE! (Function ADD parameter 2 expects number values. But '2 204' is a text and cannot be coerced to a number.)"
     },
     {
      "h": "%  Total REST OCT + NOV + DEC",
-     "formula": "=IF(Y2171=$Y$2,H2171/(M2171*(1-$AN$3)+N2171+O2171),\" \")",
-     "value": 0.5853080568720379
+     "formula": "=IF(Y2496=$Y$2,H2496/(M2496*(1-$AN$3)+N2496+O2496),\" \")",
+     "value": "#VALUE! (Function ADD parameter 2 expects number values. But '2 204' is a text and cannot be coerced to a number.)"
     },
     {
      "h": "Available in AWD (units)",
-     "formula": "=iferror(VLOOKUP(A2171,AWD!K:L,2,0),0)",
-     "value": 25
+     "formula": "=iferror(VLOOKUP(A2496,AWD!K:L,2,0),0)",
+     "value": 1533
     },
     {
      "h": "Inbound to AWD (units)",
-     "formula": "=iferror(VLOOKUP(A2171,AWD!K:N,4,0),0)",
-     "value": 121
+     "formula": "=iferror(VLOOKUP(A2496,AWD!K:N,4,0),0)",
+     "value": 0
     },
     {
      "h": "Outbound to FBA (units)",
-     "formula": "=iferror(VLOOKUP(S2171,AWD!K:P,6,0),0)",
-     "value": 47
+     "formula": "=iferror(VLOOKUP(S2496,AWD!K:P,6,0),0)",
+     "value": 924
     },
     {
      "h": "",
-     "formula": "=O2171-R2171-H2171-AQ2171-AR2171-AS2171",
-     "value": -253
+     "formula": "=O2496-R2496-H2496-AQ2496-AR2496-AS2496",
+     "value": "#VALUE! (Function MINUS parameter 1 expects number values. But '2 004' is a text and cannot be coerced to a number.)"
     },
     {
      "h": "",
-     "formula": "=if(AT2171<-1,\"OK;\",AT2171)",
-     "value": "OK;"
+     "formula": "=if(AT2496<-1,\"OK;\",AT2496)",
+     "value": "#VALUE! (Function MINUS parameter 1 expects number values. But '2 004' is a text and cannot be coerced to a number.)"
     },
     {
      "h": "Can restock",
-     "formula": "=IF(or(R2171>0,AQ2171>0),\"Can restock\")",
+     "formula": "=IF(or(R2496>0,AQ2496>0),\"Can restock\")",
      "value": "Can restock"
     },
     {
      "h": "сент.2026",
-     "formula": 9,
-     "value": 9
+     "formula": 135,
+     "value": 135
     },
     {
      "h": "продажи 12 month ",
-     "formula": 516,
-     "value": 516
+     "formula": 3560,
+     "value": 3560
     },
     {
      "h": "Новинка?",
-     "formula": "=if(AX2171>0,\"Old\",\"New\")",
+     "formula": "=if(AX2496>0,\"Old\",\"New\")",
      "value": "Old"
     }
    ]
