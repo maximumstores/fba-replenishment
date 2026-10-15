@@ -1,0 +1,33 @@
+{
+ "rows": 1304,
+ "ok": 1304,
+ "bad": 0,
+ "bad_sample": [],
+ "sample": [
+  {
+   "asin": "B09TPQC3QP",
+   "report": 1602.0,
+   "nina": 1602.0
+  },
+  {
+   "asin": "B085THHQ5Y",
+   "report": 3310.0,
+   "nina": 3310.0
+  },
+  {
+   "asin": "B08JVMMW4D",
+   "report": 1646.0,
+   "nina": 1646.0
+  },
+  {
+   "asin": "B0HG353SC8",
+   "report": 232.0,
+   "nina": 232.0
+  },
+  {
+   "asin": "B0GJTZQDYW",
+   "report": 342.0,
+   "nina": 342.0
+  }
+ ]
+}
