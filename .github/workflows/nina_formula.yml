@@ -19,7 +19,7 @@ jobs:
       - name: Verify
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
-        run: python nina_formula.py B0BDZGH33K
+        run: python nina_formula.py B0BDZND1XQ
       - name: Save result
         run: |
           git config user.name "fba-alert-bot"
