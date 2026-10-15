@@ -1,0 +1,94 @@
+{
+ "nina_cols_after_available": [
+  "Available",
+  "Rstock Q4",
+  "PLAN Q4",
+  "Plan 10'26"
+ ],
+ "totals": {
+  "asins_bq_with_plan": 2360,
+  "asins_nina_with_plan": 4037,
+  "sum_bq": 337802.0,
+  "sum_nina": 532149.0,
+  "same(±1)": 105,
+  "only_bq": 231,
+  "only_nina": 1908
+ },
+ "worst": [
+  {
+   "asin": "B08D113DXR",
+   "demand_2m_bq": 8469.0,
+   "demand_2m_nina": 0.0,
+   "diff": 8469.0
+  },
+  {
+   "asin": "B09C4VW4YP",
+   "demand_2m_bq": 3968.8,
+   "demand_2m_nina": 0.0,
+   "diff": 3968.8
+  },
+  {
+   "asin": "B0BDZND1XQ",
+   "demand_2m_bq": 3936.8,
+   "demand_2m_nina": 864.0,
+   "diff": 3072.8
+  },
+  {
+   "asin": "B09C4WJ38S",
+   "demand_2m_bq": 3028.2,
+   "demand_2m_nina": 0.0,
+   "diff": 3028.2
+  },
+  {
+   "asin": "B0BDZLHYBL",
+   "demand_2m_bq": 2818.9,
+   "demand_2m_nina": 623.0,
+   "diff": 2195.9
+  },
+  {
+   "asin": "B0GNBSDL65",
+   "demand_2m_bq": 0.0,
+   "demand_2m_nina": 2102.0,
+   "diff": -2102.0
+  },
+  {
+   "asin": "B09C4WCKL9",
+   "demand_2m_bq": 2562.5,
+   "demand_2m_nina": 701.0,
+   "diff": 1861.5
+  },
+  {
+   "asin": "B085THHQ5Y",
+   "demand_2m_bq": 1797.9,
+   "demand_2m_nina": 0.0,
+   "diff": 1797.9
+  }
+ ],
+ "sample": [
+  {
+   "asin": "B0FHQLWPXP",
+   "demand_2m_bq": 31.3,
+   "demand_2m_nina": 63.0
+  },
+  {
+   "asin": "B0CZ73JV3H",
+   "demand_2m_bq": 18.0,
+   "demand_2m_nina": 106.0
+  },
+  {
+   "asin": "B0DC146K6T",
+   "demand_2m_bq": 5.5,
+   "demand_2m_nina": 15.0
+  },
+  {
+   "asin": "B0D2P3LHZB",
+   "demand_2m_bq": 35.3,
+   "demand_2m_nina": 69.0
+  },
+  {
+   "asin": "B0BXLW7JRM",
+   "demand_2m_bq": 33.5,
+   "demand_2m_nina": 50.0
+  }
+ ]
+}
