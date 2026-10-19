@@ -82,11 +82,23 @@ def _lost(df: pd.DataFrame, units_short: pd.Series) -> pd.Series:
     return np.where(have, df["lost_eur"], units_short * df["price_eur"])
 
 
+def _split_sources(r: pd.DataFrame) -> pd.DataFrame:
+    """Чем покрыть «Срочно слать»: сначала AWD и склад 3PL (можно слать сейчас), потом ближайший заказ, остаток — нечем."""
+    if not {"awd", "wrh", "order_qty"} <= set(r.columns):
+        return r
+    stock = (r["awd"] + r["wrh"]).clip(lower=0)
+    r["can_send"] = np.minimum(r["need_units"], stock)
+    r["from_order"] = np.minimum(r["need_units"] - r["can_send"], r["order_qty"].clip(lower=0))
+    r["no_source"] = r["need_units"] - r["can_send"] - r["from_order"]
+    return r
+
+
 def out_now(df: pd.DataFrame) -> pd.DataFrame:
     """Отчёт 1: ASIN без доступного стока сейчас."""
     r = df[df["available"] <= 0].copy()
     r["need_units"] = np.maximum(r["demand_2m"] - (r["available"] + r["inbound"]), 0.0)
     r["lost_eur"] = _lost(r, r["need_units"])
+    r = _split_sources(r)
     return r.sort_values("lost_eur", ascending=False).reset_index(drop=True)
 
 
@@ -96,6 +108,7 @@ def need_2m(df: pd.DataFrame) -> pd.DataFrame:
     r["need_units"] = np.maximum(r["demand_2m"] - (r["available"] + r["inbound"]), 0.0)
     r = r[r["need_units"] > 0].copy()
     r["lost_eur"] = _lost(r, r["need_units"])
+    r = _split_sources(r)
     return r.sort_values("lost_eur", ascending=False).reset_index(drop=True)
 
 
@@ -104,8 +117,9 @@ def grouped(report: pd.DataFrame, by: list[str] | None = None) -> pd.DataFrame:
     by = by or GROUP_BY
     if report.empty:
         return pd.DataFrame(columns=[*by, "asins", "need_units", "lost_eur"])
+    extra = {c: (c, "sum") for c in ("can_send", "from_order", "no_source") if c in report.columns}
     g = report.groupby(by, dropna=False, as_index=False).agg(
-        asins=("asin", "nunique"), need_units=("need_units", "sum"), lost_eur=("lost_eur", "sum"))
+        asins=("asin", "nunique"), need_units=("need_units", "sum"), **extra, lost_eur=("lost_eur", "sum"))
     return g.sort_values("lost_eur", ascending=False).reset_index(drop=True)
 
 
@@ -156,8 +170,13 @@ def send_email(subject: str, body: str, to: list[str]) -> None:
 
 
 DETAIL_COLUMNS = {"ab": "A/B", "category": "Category+parent", "color": "Color", "size": "Size", "asin": "ASIN", "available": "Available",
-                  "inbound": "Inbound", "demand_2m": "Demand 2 мес", "need_units": "Срочно слать, шт", "lost_eur": "Потери, €"}
-GROUP_COLUMNS = {"ab": "A/B", "category": "Category+parent", "color": "Color", "asins": "ASIN, шт", "need_units": "Срочно слать, шт", "lost_eur": "Потери, €"}
+                  "inbound": "Inbound", "demand_2m": "Demand 2 мес", "need_units": "Срочно слать, шт",
+                  "awd": "AWD", "wrh": "Склад 3PL + inbound", "order_qty": "В заказе",
+                  "can_send": "Можно слать сейчас, шт", "from_order": "Ждёт заказа, шт", "no_source": "Нечем пополнить, шт",
+                  "lost_eur": "Потери, €"}
+GROUP_COLUMNS = {"ab": "A/B", "category": "Category+parent", "color": "Color", "asins": "ASIN, шт", "need_units": "Срочно слать, шт",
+                 "can_send": "Можно слать сейчас, шт", "from_order": "Ждёт заказа, шт", "no_source": "Нечем пополнить, шт",
+                 "lost_eur": "Потери, €"}
 
 
 def _table(df: pd.DataFrame, columns: dict[str, str]) -> list[list]:
@@ -197,7 +216,7 @@ def publish(book, market: str, now: pd.DataFrame, plan: pd.DataFrame, stamp: str
         (f"{market} · Аут сейчас", _table(now, DETAIL_COLUMNS_L), f"{market}: ASIN без доступного стока сейчас. Обновлено {stamp}. Сортировка по колонке «Потери» (деньги; основа указана в заголовке колонки)."),
         (f"{market} · Аут сейчас (группы)", _table(grouped(now), GROUP_COLUMNS_L), f"{market}: аут сейчас по группам A/B → категория → цвет. Обновлено {stamp}."),
         (f"{market} · Рест на 2 мес", _table(plan, DETAIL_COLUMNS_L),
-         f"{market}: срочно слать = Demand forecast 2 мес − (Available + Inbound). Обновлено {stamp}. Сортировка по колонке «Потери» (деньги; основа указана в заголовке колонки)."),
+         f"{market}: срочно слать = Demand forecast 2 мес − (Available + Inbound); дальше — чем покрыть: AWD и склад 3PL (можно слать сейчас) → ближайший заказ → нечем. Новые ASIN без продаж не показываем. Обновлено {stamp}. Сортировка по колонке «Потери» (деньги; основа указана в заголовке колонки)."),
         (f"{market} · Рест на 2 мес (группы)", _table(grouped(plan), GROUP_COLUMNS_L), f"{market}: рест на 2 мес по группам A/B → категория → цвет. Обновлено {stamp}."),
     ]
     if not with_plan:  # рынки без прогноза спроса: вкладки «Рест на 2 мес» не создаём

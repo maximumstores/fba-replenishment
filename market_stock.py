@@ -6,6 +6,8 @@ Demand 2 мес берём из forecast.plan_sales (план по ASIN) — п�
 """
 from __future__ import annotations
 
+import re
+
 import pandas as pd
 
 import loaders
@@ -118,6 +120,66 @@ def build_market(market: str, stock: pd.DataFrame, dim: pd.DataFrame, demand: pd
     return out[rr.NORMALIZED].reset_index(drop=True)
 
 
+SOLD_SQL = """SELECT 'US' AS market, asin FROM `{p}.forecast.fact_sales_monthly` WHERE units > 0 GROUP BY 1, 2
+UNION DISTINCT
+SELECT country AS market, asin FROM `{p}.forecast.summer_src` WHERE kind = 'fact' AND units > 0 GROUP BY 1, 2"""
+SOURCES_SQL = "SELECT * FROM `{p}.mt.amazon_starting_balance_native`"
+# Orders-Stock: чем можно пополнить FBA. AWD есть только у US и DE.
+SOURCE_COLS = {
+    "US": {"awd": "AWD US", "wrh": "WRH US+ Inbound", "order_qty": "Order US"},
+    "CA": {"wrh": "WRH CA+ Inbound", "order_qty": "Order CA"},
+    "DE": {"awd": "AWD DE", "wrh": "WRH DE+ Inbound", "order_qty": "Order DE"},
+    "UK": {"wrh": "WRH UK+Inbound", "order_qty": "Order UK"},
+}
+
+
+def parse_sources(rows: list[list]) -> dict[str, pd.DataFrame]:
+    """Orders-Stock (amazon_starting_balance): строка шапки — та, где в колонке A стоит «ASIN»; колонки ищем по названию."""
+    hi = next((i for i, r in enumerate(rows) if r and str(r[0]).strip().upper() == "ASIN"), None)
+    if hi is None:
+        return {}
+    head = [" ".join(str(c).replace("\xa0", " ").split()).lower() for c in rows[hi]]
+    out = {}
+    for m, cols in SOURCE_COLS.items():
+        idx = {k: next((i for i, h in enumerate(head) if h == v.lower()), None) for k, v in cols.items()}
+        recs = []
+        for r in rows[hi + 1:]:
+            asin = str(r[0]).strip().upper() if r else ""
+            if not re.fullmatch(r"B0[A-Z0-9]{8}", asin):
+                continue
+            recs.append({"asin": asin, **{k: (_num(r[i]) if i is not None and i < len(r) else 0.0) for k, i in idx.items()}})
+        df = pd.DataFrame(recs)
+        if not df.empty:
+            df = df.groupby("asin", as_index=False).sum(numeric_only=True)
+        for k in ("awd", "wrh", "order_qty"):
+            if k not in df.columns:
+                df[k] = 0.0
+        out[m] = df
+    return out
+
+
+def add_sources(df: pd.DataFrame, src: pd.DataFrame | None) -> pd.DataFrame:
+    """Колонки AWD / склад 3PL / в заказе по ASIN (нет данных → 0)."""
+    df = df.copy()
+    for k in ("awd", "wrh", "order_qty"):
+        df[k] = df["asin"].map(src.set_index("asin")[k]).fillna(0.0) if src is not None and not src.empty else 0.0
+    return df
+
+
+def drop_never_sold(df: pd.DataFrame, sold: set[str], dim: pd.DataFrame) -> pd.DataFrame:
+    """Просьба Нины (19.10.2026): новый товар без единой продажи в отчёт не попадает, пока не продастся в первый раз.
+    Новый ASIN старого товара (есть old_asin в справочнике с продажами) остаётся — его сток уже сложен со старым."""
+    if df is None or df.empty or not sold:
+        return df
+    old = {}
+    if "old_asin" in dim.columns:
+        for a, o in zip(dim["asin"], dim["old_asin"]):
+            if isinstance(o, str) and o.strip():
+                old.setdefault(str(a).strip().upper(), set()).add(o.strip().upper())
+    keep = [a in sold or bool(old.get(a, set()) & sold) for a in df["asin"].astype(str).str.upper()]
+    return df[keep].reset_index(drop=True)
+
+
 def category_parent_map(dim: pd.DataFrame) -> dict[str, str]:
     """ASIN → «Category+parent» из справочника (dim_product.group_key, напр. «Mens Sets 320»).
     Старый ASIN (old_asin) получает группу своего наследника — так находятся строки Нины со старыми ASIN."""
@@ -178,6 +240,39 @@ def load_markets(markets: tuple[str, ...] = ("US", "CA", "DE", "UK")) -> dict[st
                 df["price_eur"] = df["asin"].map(ca["price_eur"]).fillna(0.0)
             except Exception as exc:
                 print(f"[warn] план CA недоступен ({exc}); CA считаю по Hopted без плана")
+    # DE/UK из вкладок Нины: перелистинг — сток старого ASIN прибавляем к новому (как у US/CA)
+    for m in ("DE", "UK"):
+        if m in nina and m in result:
+            result[m] = merge_old_asins_report(result[m], dim)
+    try:
+        sold_df = loaders._bq_query(SOLD_SQL.format(p=p))
+        sold = {mk: set(g["asin"].astype(str).str.upper()) for mk, g in sold_df.groupby("market")}
+    except Exception as exc:
+        print(f"[warn] история продаж недоступна ({exc}); новые ASIN не отфильтрованы")
+        sold = {}
+    try:
+        src = parse_sources(loaders._bq_frame_to_rows(loaders._bq_query(SOURCES_SQL.format(p=p))))
+    except Exception as exc:
+        print(f"[warn] Orders-Stock недоступен ({exc}); колонки AWD / склад / заказ = 0")
+        src = {}
     # по просьбе Нины (19.10.2026): во всех отчётах категория = Category+parent из справочника
     cp = category_parent_map(dim)
-    return {m: apply_category_parent(df, cp) for m, df in result.items()}
+    out = {}
+    for m, df in result.items():
+        df = drop_never_sold(df, sold.get(m, set()), dim)
+        out[m] = add_sources(apply_category_parent(df, cp), src.get(m))
+    return out
+
+
+def merge_old_asins_report(df: pd.DataFrame, dim: pd.DataFrame) -> pd.DataFrame:
+    """merge_old_asins для готового отчётного вида: складываем available/inbound старого ASIN в новый,
+    остальные поля нового ASIN сохраняем; строки старых ASIN убираем."""
+    if df is None or df.empty or "old_asin" not in dim.columns:
+        return df
+    merged = merge_old_asins(df[["asin", "available", "inbound"]], dim).set_index("asin")
+    base = df.drop_duplicates("asin").set_index("asin")
+    keep = [a for a in merged.index if a in base.index]
+    out = base.loc[keep].copy()
+    out["available"] = merged.loc[keep, "available"]
+    out["inbound"] = merged.loc[keep, "inbound"]
+    return out.reset_index()[df.columns]
