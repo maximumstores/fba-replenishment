@@ -60,7 +60,7 @@ def parse_hopted(rows: list[list], codes: set[str] | None = None) -> pd.DataFram
                                                    days_supply=("days_supply", "max"))
 
 
-DIM_SQL = """SELECT d.asin, d.old_asin, COALESCE(NULLIF(d.ab_winter_a,''), NULLIF(d.abcd_class,''), '') AS ab, d.category, d.color, d.size,
+DIM_SQL = """SELECT d.asin, d.old_asin, COALESCE(NULLIF(d.ab_winter_a,''), NULLIF(d.abcd_class,''), '') AS ab, d.category, d.group_key, d.color, d.size,
        c.avg_cogs AS cogs, d.active_us, d.active_ca, d.active_de, d.active_uk
 FROM `{p}.forecast.dim_product` d LEFT JOIN `{p}.forecast.group_cogs` c USING (group_key)"""
 DEMAND_SQL = """SELECT asin, SUM(plan_units) AS demand_2m FROM `{p}.forecast.plan_sales`
@@ -109,11 +109,37 @@ def build_market(market: str, stock: pd.DataFrame, dim: pd.DataFrame, demand: pd
         df = df.merge(demand.drop_duplicates("asin"), on="asin", how="left", suffixes=("", "_p"))
         df["demand_2m"] = df.pop("demand_2m_p").fillna(0.0)
     df["price_eur"] = pd.to_numeric(df.get("cogs"), errors="coerce").fillna(0.0)
-    out = pd.DataFrame({"market": market, "ab": df["ab"].fillna(""), "category": df["category"].fillna("(нет в справочнике)"),
+    cat = df["group_key"] if "group_key" in df.columns else df["category"]
+    out = pd.DataFrame({"market": market, "ab": df["ab"].fillna(""),
+                        "category": cat.fillna(df["category"]).fillna("(нет в справочнике)"),
                         "color": df["color"].fillna(""), "size": df["size"].fillna(""), "asin": df["asin"],
                         "available": df["available"], "inbound": df["inbound"], "demand_2m": df["demand_2m"],
                         "lost_eur": 0.0, "price_eur": df["price_eur"]})
     return out[rr.NORMALIZED].reset_index(drop=True)
+
+
+def category_parent_map(dim: pd.DataFrame) -> dict[str, str]:
+    """ASIN → «Category+parent» из справочника (dim_product.group_key, напр. «Mens Sets 320»).
+    Старый ASIN (old_asin) получает группу своего наследника — так находятся строки Нины со старыми ASIN."""
+    if "group_key" not in dim.columns:
+        return {}
+    d = dim.dropna(subset=["group_key"])
+    d = d[d["group_key"].astype(str).str.strip() != ""]
+    m = {str(a).strip().upper(): g for a, g in zip(d["asin"], d["group_key"])}
+    if "old_asin" in d.columns:
+        for a, g in zip(d["old_asin"], d["group_key"]):
+            if isinstance(a, str) and a.strip():
+                m.setdefault(a.strip().upper(), g)
+    return m
+
+
+def apply_category_parent(df: pd.DataFrame, cp: dict[str, str]) -> pd.DataFrame:
+    """Колонка category = Category+parent из справочника; если ASIN в справочнике нет — оставляем как было."""
+    if df is None or df.empty or not cp:
+        return df
+    df = df.copy()
+    df["category"] = df["asin"].astype(str).str.upper().map(cp).fillna(df["category"])
+    return df
 
 
 def load_markets(markets: tuple[str, ...] = ("US", "CA", "DE", "UK")) -> dict[str, pd.DataFrame]:
@@ -152,4 +178,6 @@ def load_markets(markets: tuple[str, ...] = ("US", "CA", "DE", "UK")) -> dict[st
                 df["price_eur"] = df["asin"].map(ca["price_eur"]).fillna(0.0)
             except Exception as exc:
                 print(f"[warn] план CA недоступен ({exc}); CA считаю по Hopted без плана")
-    return result
+    # по просьбе Нины (19.10.2026): во всех отчётах категория = Category+parent из справочника
+    cp = category_parent_map(dim)
+    return {m: apply_category_parent(df, cp) for m, df in result.items()}

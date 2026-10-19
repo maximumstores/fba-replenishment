@@ -155,9 +155,9 @@ def send_email(subject: str, body: str, to: list[str]) -> None:
         s.send_message(msg)
 
 
-DETAIL_COLUMNS = {"ab": "A/B", "category": "Category", "color": "Color", "size": "Size", "asin": "ASIN", "available": "Available",
+DETAIL_COLUMNS = {"ab": "A/B", "category": "Category+parent", "color": "Color", "size": "Size", "asin": "ASIN", "available": "Available",
                   "inbound": "Inbound", "demand_2m": "Demand 2 мес", "need_units": "Срочно слать, шт", "lost_eur": "Потери, €"}
-GROUP_COLUMNS = {"ab": "A/B", "category": "Category", "color": "Color", "asins": "ASIN, шт", "need_units": "Срочно слать, шт", "lost_eur": "Потери, €"}
+GROUP_COLUMNS = {"ab": "A/B", "category": "Category+parent", "color": "Color", "asins": "ASIN, шт", "need_units": "Срочно слать, шт", "lost_eur": "Потери, €"}
 
 
 def _table(df: pd.DataFrame, columns: dict[str, str]) -> list[list]:

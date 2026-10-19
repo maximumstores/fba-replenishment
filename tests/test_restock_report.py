@@ -106,4 +106,4 @@ def test_publish_writes_four_tabs_with_note_header_and_sorted_rows():
     assert ws.cleared and ws.mode == "RAW" and ws.frozen == 3
     assert ws.payload[0][0].startswith("US: ASIN без доступного стока") and ws.payload[2][0] == "A/B"
     assert ws.payload[3][4] == "B0AAAAAAA1"  # первая строка — самые большие потери
-    assert book.tabs["US · Рест на 2 мес (группы)"].payload[2][:3] == ["A/B", "Category", "Color"]
+    assert book.tabs["US · Рест на 2 мес (группы)"].payload[2][:3] == ["A/B", "Category+parent", "Color"]
