@@ -193,6 +193,7 @@ def publish(book, rows: list[list], stamp: str):
     try:
         sr = book.worksheet(SEARCH_TAB)
         sr.update_acell("A2", note)
+        sr.freeze(rows=3)  # шапка таблицы в строке 3; результаты с 4-й строки не закрепляем
     except Exception:
         sr = book.add_worksheet(SEARCH_TAB, rows=500, cols=9)
         sr.update([["Поиск по ASIN: вставьте ASIN (можно списком) в столбец A, с A4 вниз, до 200 штук. Таблица справа заполнится сама."], [note],
@@ -200,7 +201,7 @@ def publish(book, rows: list[list], stamp: str):
         sr.update_acell("C4", f"=IFERROR(FILTER('{INDEX_TAB}'!A2:G; ISNUMBER(MATCH('{INDEX_TAB}'!A2:A; $A$5:$A$204; 0)));"
                               f"\"Нет остатка не 0 по этим ASIN (или ASIN не введён)\")")
         sr.update([HEAD], "C3")
-        sr.freeze(rows=4)
+        sr.freeze(rows=3)
         sr.format("A4", {"textFormat": {"bold": True}})
     return idx
 
