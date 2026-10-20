@@ -33,20 +33,52 @@
   "30:MAX of DATA",
   "32:Account"
  ],
- "box_rows": 357,
+ "box_rows": 1428,
  "distinct_asins": 357,
- "boxes_without_shipment_id": 41,
- "units_without_shipment_id": 0.0,
- "units_total": 0.0,
- "distinct_shipment_ids": 17,
- "distinct_shipment_names": 16,
+ "boxes_without_shipment_id": 698,
+ "units_without_shipment_id": 3093.0,
+ "units_total": 32025.0,
+ "distinct_shipment_ids": 51,
+ "distinct_shipment_names": 49,
  "top_names": [
+  [
+   "26",
+   101
+  ],
   [
    "MER-FF-SPO- TX01/07/26/1",
    69
   ],
   [
+   "27",
+   66
+  ],
+  [
+   "25",
+   64
+  ],
+  [
    "MER-FF-equipp-TX 07/27/26/1",
+   48
+  ],
+  [
+   "MER-FF-Equipp-TX  09/28/26/7",
+   43
+  ],
+  [
+   "MER-FF-equipp-TX08/17/26/2",
+   40
+  ],
+  [
+   "MER-FF-Equipp-TX  09/28/26/8",
+   40
+  ],
+  [
+   "MER-FF-equipp-TX08/17/26/3",
+   38
+  ],
+  [
+   "MER-FF-Eleaf-TX  09/30/26/2",
    38
   ],
   [
@@ -56,70 +88,46 @@
   [
    "MER-FF-equipp-TX08/17/26/6",
    36
-  ],
-  [
-   "MER-FF-MREQ- TX01/07/26/1",
-   30
-  ],
-  [
-   "MER-FF-equipp-TX08/17/26/7",
-   30
-  ],
-  [
-   "",
-   21
-  ],
-  [
-   "MER-FF-equipp-TX08/17/26/4",
-   18
-  ],
-  [
-   "MER-FF-equipp-TX08/17/26/3",
-   16
-  ],
-  [
-   "MER-FF-equipp-TX09/10/26/1",
-   15
-  ],
-  [
-   "MER-FF-MREQ- TX16/06/26/3",
-   13
-  ],
-  [
-   "MER-FF-equipp-TX08/17/26/2",
-   12
   ]
  ],
+ "c_sent": 20,
+ "c_stock": 21,
+ "units_sent_to_amazon": 31094.0,
+ "units_stock_in_warehouse": 931.0,
+ "walmart_boxes": 12,
+ "blank_name_blank_ship": 32,
+ "ship_id_no_name": 0,
+ "name_no_ship_id_not_walmart": 655,
  "sample_no_ship": [
   [
-   "s-1362-3319",
-   "B07W4S5NMY",
-   "",
-   ""
-  ],
-  [
-   "",
-   "B08H58PXDF",
-   "",
-   ""
-  ],
-  [
-   "MA55P2 PL",
-   "B08H58Q372",
-   "",
-   ""
-  ],
-  [
    "Mens SS",
-   "B08L6RT5WL",
-   "",
+   "B0H6SLQBJN",
+   "65",
    "MER-FF-equipp-TX09/10/26/2"
   ],
   [
-   "",
-   "B09Q3J5T64",
-   "",
-   ""
+   "Mens Sets+Beanie",
+   "B0DBZHSXX8",
+   "18",
+   "MER-FF-equipp-TX09/10/26/1"
+  ],
+  [
+   "Mens Sets+Beanie",
+   "B0DBZD1XCR",
+   "18",
+   "MER-FF-equipp-TX09/10/26/1"
+  ],
+  [
+   "Mens Sets+Beanie",
+   "B0DBZD1XCR",
+   "18",
+   "MER-FF-equipp-TX09/10/26/1"
+  ],
+  [
+   "Mens Sets+Beanie",
+   "B0DBZFNHHD",
+   "18",
+   "MER-FF-equipp-TX09/10/26/1"
   ]
  ]
 }
