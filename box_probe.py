@@ -21,10 +21,13 @@ def main():
     ws = next(w for w in retry(book.worksheets) if w.title.strip().lower() == "fulfillment-box tx")
     vals = retry(lambda: ws.get("A1:AZ6000", value_render_option="FORMATTED_VALUE"))
     head = [" ".join(str(c).split()) for c in vals[0]]
-    idx = {h.lower(): i for i, h in enumerate(head) if h}
+    idx = {}
+    for i, h in enumerate(head):
+        if h:
+            idx.setdefault(h.lower(), i)  # первое вхождение (ean/asin повторяются правее)
     def col(name):
         return idx.get(name.lower())
-    c_asin, c_ship, c_name, c_qty, c_ctn = col("asin"), col("Shipment ID"), col("Shipment name"), col("QTY /CTN"), col("CTN NO")
+    c_asin, c_ship, c_name, c_qty, c_ctn = col("asin"), col("Shipment ID"), col("Shipment name"), col("QTY/CTN"), col("CTN NO")
     rows = [r for r in vals[1:] if r and len(r) > (c_asin or 0) and re.fullmatch(r"B0[A-Z0-9]{8}", str(r[c_asin]).strip())]
     get = lambda r, c: str(r[c]).strip() if c is not None and c < len(r) else ""
     no_ship = [r for r in rows if not get(r, c_ship)]
@@ -35,7 +38,13 @@ def main():
            "box_rows": len(rows), "distinct_asins": len({get(r, c_asin) for r in rows}),
            "boxes_without_shipment_id": len(no_ship), "units_without_shipment_id": qty(no_ship), "units_total": qty(rows),
            "distinct_shipment_ids": len(ships), "distinct_shipment_names": len(names),
-           "top_names": names.most_common(12), "sample_no_ship": [[get(r, 0), get(r, c_asin), get(r, c_qty), get(r, c_name)] for r in no_ship[:5]]}
+           "top_names": names.most_common(12), "c_sent": col("Sent to amazon"), "c_stock": col("Stock"),
+           "units_sent_to_amazon": sum(float(re.sub(r"[^0-9.]", "", get(r, col("Sent to amazon"))) or 0) for r in rows),
+           "units_stock_in_warehouse": sum(float(re.sub(r"[^0-9.]", "", get(r, col("Stock"))) or 0) for r in rows),
+           "walmart_boxes": sum(1 for r in rows if get(r, c_name).lower().startswith("walmart")),
+           "blank_name_blank_ship": sum(1 for r in rows if not get(r, c_name) and not get(r, c_ship)),
+           "ship_id_no_name": sum(1 for r in rows if get(r, c_ship) and not get(r, c_name)),
+           "name_no_ship_id_not_walmart": sum(1 for r in rows if get(r, c_name) and not get(r, c_ship) and not get(r, c_name).lower().startswith("walmart")), "sample_no_ship": [[get(r, 0), get(r, c_asin), get(r, c_qty), get(r, c_name)] for r in no_ship[:5]]}
     Path("state").mkdir(exist_ok=True)
     Path("state/box_probe.json").write_text(json.dumps(out, ensure_ascii=False, indent=1))
     print("ok")
