@@ -27,13 +27,13 @@ ASIN_RE = re.compile(r"B0[A-Z0-9]{8}")
 # boxes: каждая строка = коробка; сворачиваем по ASIN: коробок, штук, на складе, отправлено, шипменты.
 SOURCES = [
     # ---- US ----
-    dict(book="US", market="US", tab="stock Amazon", kind="rows", asin=["asin"], split="Account Title",
+    dict(book="US", market="US", tab="stock Amazon", kind="rows", asin=["asin"], hdr=1, asin_idx=4, split="Account Title",
          metrics={"Всего на Amazon": ["Total Units"], "Inbound": ["Inbound"], "Available": ["Available"],
                   "FC Transfer": ["FC Transfer"], "FC Processing": ["FC Processing"], "Unfulfillable": ["Unfulfillable"]}),
     dict(book="US", market="US", tab="AWD-inventory-reports", kind="rows", asin=["asin"],
          metrics={"AWD: доступно": ["Available in AWD (units)"], "AWD: едет на AWD": ["Inbound to AWD (units)"],
                   "AWD: резерв": ["Reserved in AWD (units)"]}),
-    dict(book="US", market="US", tab="Orders", kind="rows", asin=["asin"],
+    dict(book="US", market="US", tab="Orders", kind="rows", asin=["asin"], hdr=1, asin_idx=0,
          metrics={"Склад (WRH QTY)": ["WRH QTY"], "AWD доступно (Orders)": ["Available in AWD (units)"],
                   "AWD → FBA (Outbound)": ["Outbound to FBA (units)"], "План 10'26": ["Plan 10'26"],
                   "План 11'26": ["Plan 11'26"], "План 12'26": ["Plan 12'26"]}),
@@ -43,15 +43,15 @@ SOURCES = [
     dict(book="CA", market="CA", tab="stock Amazon", kind="rows", asin=["asin"], split="Account Title",
          metrics={"Всего на Amazon": ["Total CA"], "Inbound": ["Inbound CA"], "Available": ["in stock CA"],
                   "FC Transfer": ["FC Transfers CA"], "FC Processing": ["For FC Processing"]}),
-    dict(book="CA", market="CA", tab="Orders", kind="rows", asin=["asin", "ASIN"], metrics={"Склад (WRH)": ["WRH QTY", "WRH q-ty"]}),
+    dict(book="CA", market="CA", tab="Orders", kind="rows", asin=["asin"], hdr=1, asin_idx=0, metrics={"Склад (WRH)": ["WRH QTY", "WRH q-ty"]}),
     dict(book="CA", market="CA", tab="FFBOX-CA EFusion", kind="boxes", asin=["asin"], units=["QTY"], name=["Shipment name"], ctn=["Boxes"]),
-    dict(book="CA", market="CA", tab="All stock at warehouses", kind="rows", asin=["asin"], metrics={"Склад (All stock)": ["SUM of Stock"]}),
+    dict(book="CA", market="CA", tab="All stock at warehouses", kind="rows", asin=["asin"], hdr=5, asin_idx=0, metrics={"Склад (All stock)": ["SUM of Stock"]}),
     # ---- UK / DE ----
     dict(book="UKDE", market="UK", tab="Amazon UK", kind="rows", asin=["asin"], split="Store name",
          metrics={"Всего на Amazon": ["SUM of Total Quantity"], "Inbound": ["SUM of Inbound"], "Available": ["SUM of Available qty"]}),
     dict(book="UKDE", market="UK", tab="Warehouse UK", kind="boxes", asin=["asin"], units=["Unit qty"], name=["Shipment name"], ctn=["product id"]),
-    dict(book="UKDE", market="UK", tab="Orders UK", kind="rows", asin=["asin", "UK"], metrics={"Склад (WRH)": ["WRH QTY", "WRH q-ty"]}),
-    dict(book="UKDE", market="DE", tab="Order DE", kind="rows", asin=["asin"], metrics={"Склад (WRH)": ["WRH QTY", "WRH q-ty"], "AWD доступно": ["Available in AWD", "Available in AWD (units)"]}),
+    dict(book="UKDE", market="UK", tab="Orders UK", kind="rows", asin=["asin"], hdr=1, asin_idx=0, metrics={"Склад (WRH)": ["WRH QTY", "WRH q-ty"]}),
+    dict(book="UKDE", market="DE", tab="Order DE", kind="rows", asin=["asin"], hdr=1, asin_idx=0, metrics={"Склад (WRH)": ["WRH QTY", "WRH q-ty"], "AWD доступно": ["Available in AWD", "Available in AWD (units)"]}),
 ] + [dict(book="UKDE", market="DE", tab=t, kind="boxes", asin=["asin"], units=["Unit qty"], name=["Shipment name"], ctn=["product id"])
      for t in ("FF BOX DE Bremen Maximumstores", "FF BOX DE Bremen Eglobetrade", "FF BOX Kodersdorf")]
 
@@ -86,13 +86,21 @@ def _cell(r, i):
 
 def read_source(ws, spec: dict, missing: list):
     vals = retry(lambda: ws.get("A1:AZ", value_render_option="UNFORMATTED_VALUE"))
-    for hi in range(min(25, len(vals))):
-        h = [_norm(c) for c in vals[hi]]
-        ia = _find(h, spec["asin"])
-        if ia is not None and sum(1 for c in h if c) >= 4:
-            break
+    if spec.get("hdr"):  # шапка и колонка ASIN заданы явно (когда в шапке ASIN не подписан)
+        hi = spec["hdr"] - 1
+        h = [_norm(c) for c in (vals[hi] if hi < len(vals) else [])]
+        ia = spec.get("asin_idx", _find(h, spec["asin"]))
     else:
-        missing.append(f"{spec['tab']}: нет колонки ASIN в первых 25 строках")
+        for hi in range(min(25, len(vals))):
+            h = [_norm(c) for c in vals[hi]]
+            ia = _find(h, spec["asin"])
+            if ia is not None and sum(1 for c in h if c) >= 4:
+                break
+        else:
+            missing.append(f"{spec['book']}/{spec['tab']}: нет колонки ASIN в первых 25 строках")
+            return []
+    if ia is None:
+        missing.append(f"{spec['book']}/{spec['tab']}: нет колонки ASIN в строке {spec['hdr']}")
         return []
     rows = vals[hi + 1:]
     out = []
@@ -101,7 +109,7 @@ def read_source(ws, spec: dict, missing: list):
         for label, aliases in spec["metrics"].items():
             i = _find(h, aliases)
             if i is None:
-                missing.append(f"{spec['tab']}: нет колонки {aliases}")
+                missing.append(f"{spec['book']}/{spec['tab']}: нет колонки {aliases}")
             else:
                 cols[label] = i
         isplit = _find(h, [spec["split"]]) if spec.get("split") else None
