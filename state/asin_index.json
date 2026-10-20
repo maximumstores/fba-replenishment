@@ -1,19 +1,10 @@
 {
- "rows": 32849,
- "asins": 5354,
- "missing": [
-  "stock Amazon: нет колонки ['Total Units']",
-  "stock Amazon: нет колонки ['Available']",
-  "stock Amazon: нет колонки ['FC Transfer']",
-  "stock Amazon: нет колонки ['FC Processing']",
-  "stock Amazon: нет колонки ['Unfulfillable']",
-  "Orders: нет колонки ['WRH QTY', 'WRH q-ty']",
-  "All stock at warehouses: нет колонки ASIN в первых 25 строках",
-  "Order DE: нет колонки ['WRH QTY', 'WRH q-ty']",
-  "Order DE: нет колонки ['Available in AWD', 'Available in AWD (units)']"
- ],
+ "rows": 46031,
+ "asins": 5526,
+ "missing": [],
  "by_tab": {
   "AWD-inventory-reports": 1695,
+  "All stock at warehouses": 57,
   "Amazon UK": 1705,
   "FF BOX DE Bremen Eglobetrade": 305,
   "FF BOX DE Bremen Maximumstores": 138,
@@ -23,9 +14,10 @@
   "Fulfillment-BOX DE": 650,
   "Fulfillment-BOX FL": 514,
   "Fulfillment-BOX TX": 635,
-  "Orders": 17085,
+  "Order DE": 1138,
+  "Orders": 17096,
   "Orders UK": 55,
   "Warehouse UK": 55,
-  "stock Amazon": 8072
+  "stock Amazon": 20048
  }
 }
