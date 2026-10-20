@@ -1,0 +1,125 @@
+{
+ "tab_rows": 2002,
+ "header": [
+  "0:Name",
+  "1:Color",
+  "2:Size",
+  "3:CTN NO",
+  "4:one size",
+  "5:xs",
+  "6:S",
+  "7:M",
+  "8:L",
+  "9:XL",
+  "10:XXL",
+  "11:XXXL",
+  "12:XXXXL",
+  "13:XXXXXL",
+  "14:QTY/CTN",
+  "15:ean",
+  "16:asin",
+  "17:p-1243-40328",
+  "18:Shipment ID",
+  "19:Shipment name",
+  "20:Sent to amazon",
+  "21:Stock",
+  "22:Category+parent",
+  "23:поштучно",
+  "24:New barcode",
+  "25:ean",
+  "26:asin",
+  "27:DATA",
+  "29:asin",
+  "30:MAX of DATA",
+  "32:Account"
+ ],
+ "box_rows": 357,
+ "distinct_asins": 357,
+ "boxes_without_shipment_id": 41,
+ "units_without_shipment_id": 0.0,
+ "units_total": 0.0,
+ "distinct_shipment_ids": 17,
+ "distinct_shipment_names": 16,
+ "top_names": [
+  [
+   "MER-FF-SPO- TX01/07/26/1",
+   69
+  ],
+  [
+   "MER-FF-equipp-TX 07/27/26/1",
+   38
+  ],
+  [
+   "MER-FF-MREQ- TX28/05/26/2",
+   36
+  ],
+  [
+   "MER-FF-equipp-TX08/17/26/6",
+   36
+  ],
+  [
+   "MER-FF-MREQ- TX01/07/26/1",
+   30
+  ],
+  [
+   "MER-FF-equipp-TX08/17/26/7",
+   30
+  ],
+  [
+   "",
+   21
+  ],
+  [
+   "MER-FF-equipp-TX08/17/26/4",
+   18
+  ],
+  [
+   "MER-FF-equipp-TX08/17/26/3",
+   16
+  ],
+  [
+   "MER-FF-equipp-TX09/10/26/1",
+   15
+  ],
+  [
+   "MER-FF-MREQ- TX16/06/26/3",
+   13
+  ],
+  [
+   "MER-FF-equipp-TX08/17/26/2",
+   12
+  ]
+ ],
+ "sample_no_ship": [
+  [
+   "s-1362-3319",
+   "B07W4S5NMY",
+   "",
+   ""
+  ],
+  [
+   "",
+   "B08H58PXDF",
+   "",
+   ""
+  ],
+  [
+   "MA55P2 PL",
+   "B08H58Q372",
+   "",
+   ""
+  ],
+  [
+   "Mens SS",
+   "B08L6RT5WL",
+   "",
+   "MER-FF-equipp-TX09/10/26/2"
+  ],
+  [
+   "",
+   "B09Q3J5T64",
+   "",
+   ""
+  ]
+ ]
+}
