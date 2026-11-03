@@ -97,6 +97,7 @@ STATUS_COLORS = {
 RU_COLUMNS = {
     "status_ru": "Статус", "abc": "ABC", "parent_group": "Группа", "color": "Цвет", "size": "Размер",
     "asin": "ASIN", "store": "Магазин", "on_hand": "Сток FBA", "inbound_counted": "Едет на FBA",
+    "awd_qty": "AWD", "wrh_qty": "Склад",
     "velocity": "Продаж/дн", "coverage_days_now": "Дней запаса", "stockout_date": "Кончится",
     "channel_ru": "Канал", "gap_days": "Дыра, дн", "qty_need": "Слать, шт", "lost_30": "Потери 30 дн, шт",
 }
@@ -484,6 +485,8 @@ def main() -> None:
     stores = sorted(report["store"].dropna().unique())
     sel_store = f.multiselect("Магазин", stores)
     sel_channel = f.multiselect("Канал", list(CHANNEL_RU), format_func=lambda c: CHANNEL_RU[c])
+    only_stock = f.checkbox("Только где есть сток на AWD или складе (> 0)", False,
+                            help="Показывает только SKU, которые реально есть откуда пополнить")
     search = f.text_input("ASIN содержит")
     min_lost = f.number_input("Не показывать, если потери за 30 дн меньше, шт", 0.0, 10000.0, 0.0, 1.0,
                               help="Прячет вялые позиции с парой продаж в месяц")
@@ -492,6 +495,10 @@ def main() -> None:
     for col, sel in (("parent_group", sel_group), ("color", sel_color), ("size", sel_size), ("store", sel_store), ("channel", sel_channel)):
         if sel:
             m &= report[col].isin(sel)
+    if only_stock:
+        awd = pd.to_numeric(report["awd_qty"], errors="coerce").fillna(0)
+        wrh = pd.to_numeric(report["wrh_qty"], errors="coerce").fillna(0)
+        m &= (awd > 0) | (wrh > 0)
     if search.strip():
         m &= report["asin"].str.contains(search.strip().upper(), regex=False)
     flt = report[m]
@@ -515,7 +522,8 @@ def main() -> None:
     with tab_asin:
         st.caption(f"Показано {len(flt)} из {len(report)} строк (ASIN × магазин). Сверху самое срочное.")
         columns = ["status_ru", "abc", "parent_group", "color", "size", "asin", "store", "on_hand", "inbound_counted",
-                   "velocity", "coverage_days_now", "stockout_date", "channel_ru", "gap_days", "qty_need", "lost_30"]
+                   "awd_qty", "wrh_qty", "velocity", "coverage_days_now", "stockout_date", "channel_ru", "gap_days",
+                   "qty_need", "lost_30"]
         view = show_table(flt, columns, "tbl_asin")
         st.download_button("Скачать CSV", csv_bytes(view), "fba_replenishment_us.csv", "text/csv")
 
