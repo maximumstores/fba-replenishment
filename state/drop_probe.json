@@ -1,0 +1,61 @@
+{
+ "no_sales_rule": {
+  "US": {
+   "without_rule": {
+    "rows": 4910,
+    "out_now": 1464,
+    "need_2m": 1585
+   },
+   "with_rule": {
+    "rows": 3769,
+    "out_now": 414,
+    "need_2m": 1156
+   }
+  },
+  "CA": {
+   "without_rule": {
+    "rows": 2019,
+    "out_now": 353,
+    "need_2m": 411
+   },
+   "with_rule": {
+    "rows": 1659,
+    "out_now": 163,
+    "need_2m": 264
+   }
+  },
+  "DE": {
+   "without_rule": {
+    "rows": 2789,
+    "out_now": 695,
+    "need_2m": 1199
+   },
+   "with_rule": {
+    "rows": 2109,
+    "out_now": 166,
+    "need_2m": 621
+   }
+  },
+  "UK": {
+   "without_rule": {
+    "rows": 777,
+    "out_now": 97,
+    "need_2m": 209
+   },
+   "with_rule": {
+    "rows": 708,
+    "out_now": 41,
+    "need_2m": 152
+   }
+  }
+ },
+ "us_text_plan_cells": {
+  "plan_columns": [
+   "Plan 10'26",
+   "Plan 11'26",
+   "Plan 12'26"
+  ],
+  "count": 0,
+  "cells": []
+ }
+}
