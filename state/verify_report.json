@@ -1,227 +1,194 @@
 {
+ "checked_at": "2026-11-11 15:07 UTC",
  "tabs": {
   "US · Аут сейчас": {
-   "rows": 1466,
+   "rows": 414,
    "duplicate_asins": 0,
-   "mismatch_vs_fresh": 0,
-   "mismatch_examples": [],
-   "head": [
-    {
-     "A/B": "B",
-     "Category": "W Sets",
-     "Color": "250 Nordic Tale Berry",
-     "Size": "Medium",
-     "ASIN": "B09C4K26BS",
-     "Available": "0",
-     "Inbound": "43",
-     "Demand 2 мес": "516.1",
-     "Срочно слать, шт": "473.1",
-     "Потери, $ (по себестоимости)": "12833.83"
-    },
-    {
-     "A/B": "A",
-     "Category": "Kids Sets+Beanie",
-     "Color": "Black",
-     "Size": "X-Large",
-     "ASIN": "B0H6R1K1DC",
-     "Available": "0",
-     "Inbound": "2",
-     "Demand 2 мес": "307.3",
-     "Срочно слать, шт": "305.3",
-     "Потери, $ (по себестоимости)": "6549.14"
-    },
-    {
-     "A/B": "A",
-     "Category": "W Sets",
-     "Color": "165 Black",
-     "Size": "Medium",
-     "ASIN": "B0HMCZTXSX",
-     "Available": "0",
-     "Inbound": "0",
-     "Demand 2 мес": "292.9",
-     "Срочно слать, шт": "292.9",
-     "Потери, $ (по себестоимости)": "6069.59"
-    }
-   ],
-   "nina": {
-    "B09C4K26BS": {
-     "sheet": [
-      "0",
-      "43"
-     ],
-     "nina": [
-      0,
-      45
-     ]
-    }
-   }
+   "missing_in_sheet": 0,
+   "extra_in_sheet": 0,
+   "missing_examples": [],
+   "extra_examples": [],
+   "source_mismatch": 0,
+   "source_examples": [],
+   "math_mismatch": 0,
+   "math_examples": [],
+   "has_source_cols": true
   },
   "US · Рест на 2 мес": {
-   "rows": 549,
+   "rows": 1156,
    "duplicate_asins": 0,
-   "mismatch_vs_fresh": 0,
-   "mismatch_examples": [],
-   "head": [
-    {
-     "A/B": "A",
-     "Category": "Mens Sets",
-     "Color": "320 Army Green",
-     "Size": "Large",
-     "ASIN": "B0BZ16JCD5",
-     "Available": "115",
-     "Inbound": "239",
-     "Demand 2 мес": "793.6",
-     "Срочно слать, шт": "439.6",
-     "Потери, $ (по себестоимости)": "15397.25"
-    },
-    {
-     "A/B": "A",
-     "Category": "Mens Sets",
-     "Color": "320 Army Green",
-     "Size": "Medium",
-     "ASIN": "B0BZ15CW4N",
-     "Available": "221",
-     "Inbound": "199",
-     "Demand 2 мес": "794.3",
-     "Срочно слать, шт": "374.3",
-     "Потери, $ (по себестоимости)": "13110.08"
-    },
-    {
-     "A/B": "B",
-     "Category": "W Sets",
-     "Color": "250 Nordic Tale Berry",
-     "Size": "Medium",
-     "ASIN": "B09C4K26BS",
-     "Available": "0",
-     "Inbound": "43",
-     "Demand 2 мес": "516.1",
-     "Срочно слать, шт": "473.1",
-     "Потери, $ (по себестоимости)": "12833.83"
-    }
-   ],
-   "nina": {
-    "B09C4K26BS": {
-     "sheet": [
-      "0",
-      "43"
-     ],
-     "nina": [
-      0,
-      45
-     ]
-    },
-    "B0H6SW4BX8": {
-     "sheet": [
-      "40",
-      "71"
-     ],
-     "nina": [
-      40,
-      71
-     ]
-    }
-   }
+   "missing_in_sheet": 0,
+   "extra_in_sheet": 0,
+   "missing_examples": [],
+   "extra_examples": [],
+   "source_mismatch": 0,
+   "source_examples": [],
+   "math_mismatch": 0,
+   "math_examples": [],
+   "has_source_cols": true
   },
   "CA · Аут сейчас": {
-   "rows": 519,
+   "rows": 163,
    "duplicate_asins": 0,
-   "mismatch_vs_fresh": 0,
-   "mismatch_examples": [],
-   "head": [
-    {
-     "A/B": "B",
-     "Category": "Wool Socks",
-     "Color": "Jet Black Pack of 6",
-     "Size": "Large",
-     "ASIN": "B0GDZ4BYBQ",
-     "Available": "0",
-     "Inbound": "0",
-     "Demand 2 мес": "130",
-     "Срочно слать, шт": "130",
-     "Потери, CAD (по цене Нины)": "7278.7"
-    },
-    {
-     "A/B": "A",
-     "Category": "Wool Socks",
-     "Color": "Black Oil Pack of 3",
-     "Size": "Medium",
-     "ASIN": "B0D45VJB4D",
-     "Available": "0",
-     "Inbound": "0",
-     "Demand 2 мес": "164.67",
-     "Срочно слать, шт": "164.67",
-     "Потери, CAD (по цене Нины)": "5432.39"
-    },
-    {
-     "A/B": "B",
-     "Category": "Wool Socks",
-     "Color": "Natural White Pack of 3",
-     "Size": "Large",
-     "ASIN": "B0GDZ6V9NB",
-     "Available": "0",
-     "Inbound": "0",
-     "Demand 2 мес": "130",
-     "Срочно слать, шт": "130",
-     "Потери, CAD (по цене Нины)": "4288.7"
-    }
-   ],
-   "nina": {
-    "B0FHQLVP1Q": {
-     "sheet": [
-      "0",
-      "54"
-     ],
-     "nina": [
-      143,
-      138
-     ]
-    }
-   }
+   "missing_in_sheet": 0,
+   "extra_in_sheet": 0,
+   "missing_examples": [],
+   "extra_examples": [],
+   "source_mismatch": 0,
+   "source_examples": [],
+   "math_mismatch": 0,
+   "math_examples": [],
+   "has_source_cols": true
   },
   "CA · Рест на 2 мес": {
-   "rows": 382,
+   "rows": 264,
    "duplicate_asins": 0,
-   "mismatch_vs_fresh": 0,
-   "mismatch_examples": [],
-   "head": [
+   "missing_in_sheet": 0,
+   "extra_in_sheet": 0,
+   "missing_examples": [],
+   "extra_examples": [],
+   "source_mismatch": 0,
+   "source_examples": [],
+   "math_mismatch": 0,
+   "math_examples": [],
+   "has_source_cols": true
+  },
+  "DE · Аут сейчас": {
+   "rows": 164,
+   "duplicate_asins": 0,
+   "missing_in_sheet": 0,
+   "extra_in_sheet": 0,
+   "missing_examples": [],
+   "extra_examples": [],
+   "source_mismatch": 1,
+   "source_examples": [
     {
-     "A/B": "B",
-     "Category": "Wool Socks",
-     "Color": "Black Pack of 6",
-     "Size": "Large",
-     "ASIN": "B0HBYGJCCQ",
-     "Available": "77",
-     "Inbound": "2",
-     "Demand 2 мес": "494",
-     "Срочно слать, шт": "415",
-     "Потери, CAD (по цене Нины)": "23235.85"
-    },
-    {
-     "A/B": "A",
-     "Category": "Wool Socks",
-     "Color": "Dark Grey Pack of 3",
-     "Size": "Large",
-     "ASIN": "B0D45RKQVG",
-     "Available": "159",
-     "Inbound": "50",
-     "Demand 2 мес": "617.5",
-     "Срочно слать, шт": "408.5",
-     "Потери, CAD (по цене Нины)": "13476.42"
-    },
-    {
-     "A/B": "A",
-     "Category": "Wool Socks",
-     "Color": "Black Oil Pack of 3",
-     "Size": "Large",
-     "ASIN": "B0D45VQJV8",
-     "Available": "42",
-     "Inbound": "6",
-     "Demand 2 мес": "446.88",
-     "Срочно слать, шт": "398.88",
-     "Потери, CAD (по цене Нины)": "13158.89"
+     "asin": "B09T6Q8MKG",
+     "Inbound": [
+      2.0,
+      1.0
+     ]
     }
    ],
-   "nina": {}
+   "math_mismatch": 0,
+   "math_examples": [],
+   "has_source_cols": true
+  },
+  "DE · Рест на 2 мес": {
+   "rows": 608,
+   "duplicate_asins": 0,
+   "missing_in_sheet": 0,
+   "extra_in_sheet": 1,
+   "missing_examples": [],
+   "extra_examples": [
+    "B0DBZHLYX2"
+   ],
+   "source_mismatch": 9,
+   "source_examples": [
+    {
+     "asin": "B0D2P4M9C5",
+     "Available": [
+      31.0,
+      30.0
+     ],
+     "Inbound": [
+      0.0,
+      1.0
+     ]
+    },
+    {
+     "asin": "B0BC1G9DF7",
+     "Available": [
+      75.0,
+      74.0
+     ],
+     "Inbound": [
+      1.0,
+      2.0
+     ]
+    },
+    {
+     "asin": "B0B919GGYQ",
+     "Inbound": [
+      1.0,
+      0.0
+     ]
+    },
+    {
+     "asin": "B0GNBSDL65",
+     "Available": [
+      302.0,
+      301.0
+     ],
+     "Inbound": [
+      8.0,
+      9.0
+     ]
+    },
+    {
+     "asin": "B09T6Q8MKG",
+     "Inbound": [
+      2.0,
+      1.0
+     ]
+    }
+   ],
+   "math_mismatch": 0,
+   "math_examples": [],
+   "has_source_cols": true
+  },
+  "UK · Аут сейчас": {
+   "rows": 42,
+   "duplicate_asins": 0,
+   "missing_in_sheet": 0,
+   "extra_in_sheet": 0,
+   "missing_examples": [],
+   "extra_examples": [],
+   "source_mismatch": 0,
+   "source_examples": [],
+   "math_mismatch": 0,
+   "math_examples": [],
+   "has_source_cols": true
+  },
+  "UK · Рест на 2 мес": {
+   "rows": 151,
+   "duplicate_asins": 0,
+   "missing_in_sheet": 0,
+   "extra_in_sheet": 0,
+   "missing_examples": [],
+   "extra_examples": [],
+   "source_mismatch": 3,
+   "source_examples": [
+    {
+     "asin": "B0BDZND1XQ",
+     "Available": [
+      41.0,
+      40.0
+     ]
+    },
+    {
+     "asin": "B0FFHC9MX5",
+     "Inbound": [
+      56.0,
+      55.0
+     ]
+    },
+    {
+     "asin": "B0CJJZ9QNZ",
+     "Available": [
+      67.0,
+      66.0
+     ],
+     "Inbound": [
+      0.0,
+      1.0
+     ]
+    }
+   ],
+   "math_mismatch": 0,
+   "math_examples": [],
+   "has_source_cols": true
   }
- }
+ },
+ "ok": false
 }
