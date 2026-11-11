@@ -2,7 +2,7 @@ name: ASIN index
 
 on:
   schedule:
-    - cron: "50 6 * * 1-5"   # после отчёта по аутам (06:30 UTC)
+    - cron: "40 4 * * 1-5"   # запасной; основной — внешний триггер вместе с отчётом
   workflow_dispatch: {}
 
 permissions:

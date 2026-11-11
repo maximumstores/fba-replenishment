@@ -2,7 +2,7 @@ name: FBA restock report (US/CA/DE/UK)
 
 on:
   schedule:
-    - cron: "30 6 * * 1-5"   # будни 06:30 UTC = 09:30 Киев (после ночной загрузки Hopted)
+    - cron: "20 4 * * 1-5"   # запасной запуск; основной — внешний триггер ~06:20 Киев. Данные в BQ готовы к ~04:00 UTC
   workflow_dispatch:
     inputs:
       silent:
@@ -18,12 +18,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+        with:
+          fetch-depth: 50
+      - name: Skip if already ran today
+        if: github.event_name == 'schedule'
+        run: |
+          if [ -n "$(TZ=Europe/Kiev git log -1 --since="$(TZ=Europe/Kiev date +%F) 00:00" --format=%h -- state/last_run.txt)" ]; then echo "SKIP=1" >> "$GITHUB_ENV"; echo "уже обновлено сегодня"; fi
+      - if: env.SKIP != '1'
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install -r requirements.txt
+      - if: env.SKIP != '1'
+        run: pip install -r requirements.txt
       - name: Build report
+        if: env.SKIP != '1'
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -32,8 +41,10 @@ jobs:
           BQ_PROJECT: reorder-497714
         run: python restock_job.py --always ${{ inputs.silent && '--no-telegram' || '' }}
       - name: Save state
+        if: env.SKIP != '1'
         run: |
           git config user.name "fba-alert-bot"
           git config user.email "noreply@github.com"
-          git add -f state/restock_state.json state/subscribers.json || true
+          TZ=Europe/Kiev date "+%F %T" > state/last_run.txt
+          git add -f state/restock_state.json state/subscribers.json state/last_run.txt || true
           git diff --cached --quiet || (git commit -m "restock state" && git pull --rebase -q && git push)
