@@ -1,23 +1,23 @@
 {
- "rows": 46049,
- "asins": 5578,
+ "rows": 46060,
+ "asins": 5576,
  "missing": [],
  "by_tab": {
   "AWD-inventory-reports": 1695,
   "All stock at warehouses": 57,
-  "Amazon UK": 1481,
+  "Amazon UK": 1476,
   "FF BOX DE Bremen Eglobetrade": 139,
   "FF BOX DE Bremen Maximumstores": 116,
   "FF BOX Kodersdorf": 270,
   "FFBOX-CA EFusion": 11,
-  "Fulfillment-BOX CA": 1482,
+  "Fulfillment-BOX CA": 1478,
   "Fulfillment-BOX DE": 665,
-  "Fulfillment-BOX FL": 630,
-  "Fulfillment-BOX TX": 727,
+  "Fulfillment-BOX FL": 603,
+  "Fulfillment-BOX TX": 733,
   "Order DE": 634,
-  "Orders": 17300,
+  "Orders": 17212,
   "Orders UK": 65,
   "Warehouse UK": 65,
-  "stock Amazon": 20712
+  "stock Amazon": 20841
  }
 }
