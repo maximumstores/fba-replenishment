@@ -83,7 +83,13 @@ def main(argv: list[str] | None = None) -> int:
         except Exception:
             pass
     for m in markets:
-        t, ch, *_ = run_market(m, data[m], state, stamp, book)
+        df = data[m]
+        no_plan = m in HAS_PLAN and (df.empty or rr.coerce_numeric(df)["demand_2m"].sum() <= 0)
+        if no_plan:  # план у источника пустой (так было 05.11 и 18.11 с UK) — не затираем вчерашние вкладки нулями
+            print(f"[warn] {m}: план пустой, вкладки не обновляю")
+            texts.append(f"{m}: план в таблице Нины пустой, вкладки {m} не обновлял (там данные прошлого запуска)")
+            continue
+        t, ch, *_ = run_market(m, df, state, stamp, book)
         texts.append(t)
         changed = changed or ch
     msg = "\n\n".join(texts)
