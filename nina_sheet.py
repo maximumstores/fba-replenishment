@@ -28,7 +28,7 @@ def _n(v) -> float:
     return rr._clean_number(v)
 
 
-def parse_orders(header: list, rows: list[list], market: str, plan: str = "rest") -> pd.DataFrame:
+def parse_orders(header: list, rows: list[list], market: str, plan: str = "rest", today=None) -> pd.DataFrame:
     """Лист Нины -> NORMALIZED. plan='rest': колонка «PLAN REST OCT-NOV» (DE); 'months': сумма двух колонок после Available (UK)."""
     h = [" ".join(str(c).replace("\xa0", " ").split()).lower() for c in header]
 
@@ -49,12 +49,23 @@ def parse_orders(header: list, rows: list[list], market: str, plan: str = "rest"
     def cell(r: list, i: int | None):
         return r[i] if i is not None and i < len(r) else ""
 
+    # plan='months': если в шапке месяцы датами («2026-11-01»), берём текущий и следующий месяц; иначе две колонки после Available
+    month_cols = [c_av + 1, c_av + 2]
+    if plan == "months":
+        from datetime import date
+        d = today or date.today()
+        nxt = (d.year + (d.month == 12), 1 if d.month == 12 else d.month + 1)
+        want = [f"{d.year}-{d.month:02d}", f"{nxt[0]}-{nxt[1]:02d}"]
+        found = [next((i for i, x in enumerate(h) if x.startswith(w)), None) for w in want]
+        if all(i is not None for i in found):
+            month_cols = found
+
     out = []
     for r in rows:
         asin = str(cell(r, 0)).strip().upper()
         if not ASIN_RE.fullmatch(asin):
             continue
-        demand = _n(cell(r, c_rest)) if plan == "rest" else _n(cell(r, c_av + 1)) + _n(cell(r, c_av + 2))
+        demand = _n(cell(r, c_rest)) if plan == "rest" else sum(_n(cell(r, i)) for i in month_cols)
         out.append({"market": market, "ab": str(cell(r, c_ab)).strip(), "category": str(cell(r, c_cat)).strip(),
                     "color": str(cell(r, c_col)).strip(), "size": str(cell(r, c_sz)).strip(), "asin": asin,
                     "available": _n(cell(r, c_av)), "inbound": _n(cell(r, c_in)), "demand_2m": max(demand, 0.0),

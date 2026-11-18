@@ -30,8 +30,18 @@ def test_de_uses_plan_rest_and_price_and_drops_junk_and_noplan():
     assert list(d["asin"]) == ["B08X1G126C"] and d.loc[0, "demand_2m"] == 17 and d.loc[0, "price_eur"] == 57.99
 
 
-def test_uk_plan_is_two_months_after_available():
-    d = ns.parse_orders(H, ROWS, "UK", plan="months").set_index("asin")
+def test_uk_plan_is_current_and_next_month_by_header():
+    from datetime import date
+    d = ns.parse_orders(H, ROWS, "UK", plan="months", today=date(2026, 10, 5)).set_index("asin")
+    assert d.loc["B08X1G126D", "demand_2m"] == 21  # 2026-10 + 2026-11
+    d = ns.parse_orders(H, ROWS, "UK", plan="months", today=date(2026, 11, 18)).set_index("asin")
+    assert d.loc["B08X1G126D", "demand_2m"] == 23  # 2026-11 + 2026-12
+
+
+def test_uk_plan_without_date_headers_falls_back_to_two_after_available():
+    from datetime import date
+    h2 = [x if not x.startswith("2026-") else f"M{i}" for i, x in enumerate(H)]
+    d = ns.parse_orders(h2, ROWS, "UK", plan="months", today=date(2026, 11, 18)).set_index("asin")
     assert d.loc["B08X1G126D", "demand_2m"] == 21
 
 
