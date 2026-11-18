@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 jobs:
   report:
@@ -37,7 +38,6 @@ jobs:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           RESTOCK_REPORT_SHEET: ${{ vars.RESTOCK_REPORT_SHEET }}
-          DASHBOARD_URL: ${{ vars.DASHBOARD_URL }}
           BQ_PROJECT: reorder-497714
         run: python restock_job.py --always ${{ inputs.silent && '--no-telegram' || '' }}
       - name: Save state
@@ -48,3 +48,10 @@ jobs:
           TZ=Europe/Kiev date "+%F %T" > state/last_run.txt
           git add -f state/restock_state.json state/subscribers.json state/last_run.txt || true
           git diff --cached --quiet || (git commit -m "restock state" && git pull --rebase -q && git push)
+      - name: Alert if failed
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          pip install -q requests
+          python notify.py "⚠️ Отчёт FBA Restock сегодня не обновился: запуск упал. Данные в таблице — с прошлого удачного запуска ($(cat state/last_run.txt 2>/dev/null)). Разбираемся. ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

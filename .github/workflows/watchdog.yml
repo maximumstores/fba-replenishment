@@ -1,0 +1,32 @@
+name: Restock watchdog (не было запуска — сообщить и перезапустить)
+
+on:
+  schedule:
+    - cron: "45 7 * * 1-5"   # запасной; основной — внешний триггер 09:47 Киев
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 50
+      - name: Check today's run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          today=$(TZ=Europe/Kiev date +%F)
+          last=$(cat state/last_run.txt 2>/dev/null || echo "нет")
+          case "$last" in "$today"*) echo "сегодня уже обновлено: $last"; exit 0;; esac
+          running=$(gh api "repos/${{ github.repository }}/actions/workflows/restock.yml/runs?status=in_progress" -q '.total_count')
+          queued=$(gh api "repos/${{ github.repository }}/actions/workflows/restock.yml/runs?status=queued" -q '.total_count')
+          if [ "$running" != "0" ] || [ "$queued" != "0" ]; then echo "отчёт сейчас считается"; exit 0; fi
+          pip install -q requests
+          python notify.py "⚠️ Отчёт FBA Restock сегодня не запускался (последний удачный: $last). Запускаю заново, обновлённая таблица придёт отдельным сообщением."
+          gh api -X POST "repos/${{ github.repository }}/actions/workflows/restock.yml/dispatches" -f ref=main
