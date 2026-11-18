@@ -2,7 +2,7 @@ name: Restock watchdog (не было запуска — сообщить и п�
 
 on:
   schedule:
-    - cron: "45 7 * * 1-5"   # запасной; основной — внешний триггер 09:47 Киев
+    - cron: "0 11 * * 1-5"   # запасной (13:00 Киев, GitHub ещё и опаздывает); основной — внешний триггер 09:47 Киев
   workflow_dispatch:
 
 permissions:
@@ -28,5 +28,13 @@ jobs:
           queued=$(gh api "repos/${{ github.repository }}/actions/workflows/restock.yml/runs?status=queued" -q '.total_count')
           if [ "$running" != "0" ] || [ "$queued" != "0" ]; then echo "отчёт сейчас считается"; exit 0; fi
           pip install -q requests
+          # перезапуск не больше одного раза в день: если сегодня уже был запуск отчёта от сторожа — только сообщение
+          since=$(date -u -d "TZ=\"Europe/Kyiv\" $today 00:00" +%FT%TZ)
+          retried=$(gh api "repos/${{ github.repository }}/actions/workflows/restock.yml/runs?event=workflow_dispatch&created=%3E%3D$since&per_page=50" \
+            -q '[.workflow_runs[] | select(.triggering_actor.login == "github-actions[bot]")] | length')
+          if [ "$retried" != "0" ]; then
+            python notify.py "⚠️ Отчёт FBA Restock сегодня так и не обновился, перезапуск тоже не помог (последний удачный: $last). Больше автоматически не перезапускаю, разбираемся вручную."
+            exit 0
+          fi
           python notify.py "⚠️ Отчёт FBA Restock сегодня не запускался (последний удачный: $last). Запускаю заново, обновлённая таблица придёт отдельным сообщением."
           gh api -X POST "repos/${{ github.repository }}/actions/workflows/restock.yml/dispatches" -f ref=main
