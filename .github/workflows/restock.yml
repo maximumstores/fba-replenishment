@@ -24,7 +24,7 @@ jobs:
       - name: Skip if already ran today
         if: github.event_name == 'schedule'
         run: |
-          if [ -n "$(TZ=Europe/Kiev git log -1 --since="$(TZ=Europe/Kiev date +%F) 00:00" --format=%h -- state/last_run.txt)" ]; then echo "SKIP=1" >> "$GITHUB_ENV"; echo "уже обновлено сегодня"; fi
+          if [ -n "$(TZ=Europe/Kyiv git log -1 --since="$(TZ=Europe/Kyiv date +%F) 00:00" --format=%h -- state/last_run.txt)" ]; then echo "SKIP=1" >> "$GITHUB_ENV"; echo "уже обновлено сегодня"; fi
       - if: env.SKIP != '1'
         uses: actions/setup-python@v5
         with:
@@ -45,7 +45,7 @@ jobs:
         run: |
           git config user.name "fba-alert-bot"
           git config user.email "noreply@github.com"
-          TZ=Europe/Kiev date "+%F %T" > state/last_run.txt
+          TZ=Europe/Kyiv date "+%F %T" > state/last_run.txt
           git add -f state/restock_state.json state/subscribers.json state/last_run.txt || true
           git diff --cached --quiet || (git commit -m "restock state" && git pull --rebase -q && git push)
       - name: Alert if failed

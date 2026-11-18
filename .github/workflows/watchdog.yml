@@ -21,7 +21,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
-          today=$(TZ=Europe/Kiev date +%F)
+          today=$(TZ=Europe/Kyiv date +%F)
           last=$(cat state/last_run.txt 2>/dev/null || echo "нет")
           case "$last" in "$today"*) echo "сегодня уже обновлено: $last"; exit 0;; esac
           running=$(gh api "repos/${{ github.repository }}/actions/workflows/restock.yml/runs?status=in_progress" -q '.total_count')
