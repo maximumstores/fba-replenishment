@@ -76,6 +76,20 @@ def normalize(raw: pd.DataFrame, market: str = "") -> pd.DataFrame:
     return out.reset_index(drop=True)
 
 
+NUMERIC_ALL = NUMERIC + ["awd", "wrh", "order_qty"]
+
+
+def coerce_numeric(df: pd.DataFrame) -> pd.DataFrame:
+    """Числовые колонки -> float. Если источник прислал текст (например «30,16» или «2 204»), разбираем его, а не падаем."""
+    df = df.copy()
+    for c in NUMERIC_ALL:
+        if c in df.columns and not pd.api.types.is_float_dtype(df[c]):
+            if not pd.api.types.is_numeric_dtype(df[c]):
+                print(f"[warn] колонка {c} пришла не числом ({df[c].dtype}); привожу к числу")
+            df[c] = df[c].map(_clean_number).astype(float)
+    return df
+
+
 def _lost(df: pd.DataFrame, units_short: pd.Series) -> pd.Series:
     """Потерянная выручка: берём готовую (Lost Sale, €) у Нины, иначе нехватка × цена."""
     have = df["lost_eur"] > 0
@@ -95,6 +109,7 @@ def _split_sources(r: pd.DataFrame) -> pd.DataFrame:
 
 def out_now(df: pd.DataFrame) -> pd.DataFrame:
     """Отчёт 1: ASIN без доступного стока сейчас."""
+    df = coerce_numeric(df)
     r = df[df["available"] <= 0].copy()
     r["need_units"] = np.maximum(r["demand_2m"] - (r["available"] + r["inbound"]), 0.0)
     r["lost_eur"] = _lost(r, r["need_units"])
@@ -104,7 +119,7 @@ def out_now(df: pd.DataFrame) -> pd.DataFrame:
 
 def need_2m(df: pd.DataFrame) -> pd.DataFrame:
     """Отчёт 2: срочное количество к рестоку = Demand 2 мес − (Available + Inbound), только положительное."""
-    r = df.copy()
+    r = coerce_numeric(df)
     r["need_units"] = np.maximum(r["demand_2m"] - (r["available"] + r["inbound"]), 0.0)
     r = r[r["need_units"] > 0].copy()
     r["lost_eur"] = _lost(r, r["need_units"])
