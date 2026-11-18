@@ -13,10 +13,10 @@ on:
         description: "Тест оповещения о сбое: упасть до расчёта (таблица и состояние не трогаются)"
         type: boolean
         default: false
-      alert_chat:
-        description: "Тест: chat_id, куда слать оповещение о сбое вместо подписчиков"
-        type: string
-        default: ""
+      dry_run:
+        description: "Тест: посчитать без записи в таблицу, без Telegram и без сохранения состояния"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -54,9 +54,9 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           RESTOCK_REPORT_SHEET: ${{ vars.RESTOCK_REPORT_SHEET }}
           BQ_PROJECT: reorder-497714
-        run: python restock_job.py --always ${{ inputs.silent && '--no-telegram' || '' }}
+        run: python restock_job.py --always ${{ inputs.dry_run && '--dry-run' || '' }} ${{ inputs.silent && '--no-telegram' || '' }}
       - name: Save state
-        if: env.SKIP != '1'
+        if: env.SKIP != '1' && !inputs.dry_run
         run: |
           git config user.name "fba-alert-bot"
           git config user.email "noreply@github.com"
@@ -64,10 +64,10 @@ jobs:
           git add -f state/restock_state.json state/subscribers.json state/last_run.txt || true
           git diff --cached --quiet || (git commit -m "restock state" && git pull --rebase -q && git push)
       - name: Alert if failed
-        if: failure()
+        if: failure() && !inputs.dry_run
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          NOTIFY_CHAT: ${{ inputs.alert_chat }}
+          ALERT_CHAT: ${{ vars.ALERT_CHAT_ID }}
         run: |
           pip install -q requests
           python notify.py "⚠️ Отчёт FBA Restock сегодня не обновился: запуск упал. Данные в таблице — с прошлого удачного запуска ($(cat state/last_run.txt 2>/dev/null)). Разбираемся. ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

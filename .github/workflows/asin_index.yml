@@ -35,6 +35,7 @@ jobs:
         if: failure()
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          ALERT_CHAT: ${{ vars.ALERT_CHAT_ID }}
         run: |
           pip install -q requests
           python notify.py "⚠️ Вкладка «Поиск ASIN» сегодня не обновилась: запуск упал. ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

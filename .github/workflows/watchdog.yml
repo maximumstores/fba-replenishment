@@ -20,6 +20,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          ALERT_CHAT: ${{ vars.ALERT_CHAT_ID }}
         run: |
           today=$(TZ=Europe/Kyiv date +%F)
           last=$(cat state/last_run.txt 2>/dev/null || echo "нет")
