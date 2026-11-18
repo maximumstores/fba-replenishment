@@ -1,5 +1,5 @@
 {
- "checked_at": "2026-11-18 15:21 UTC",
+ "checked_at": "2026-11-18 15:30 UTC",
  "tabs": {
   "US · Аут сейчас": {
    "rows": 421,
@@ -41,7 +41,7 @@
    "has_source_cols": true
   },
   "CA · Рест на 2 мес": {
-   "rows": 308,
+   "rows": 358,
    "duplicate_asins": 0,
    "missing_in_sheet": 0,
    "extra_in_sheet": 0,
@@ -67,7 +67,7 @@
    "has_source_cols": true
   },
   "DE · Рест на 2 мес": {
-   "rows": 673,
+   "rows": 674,
    "duplicate_asins": 0,
    "missing_in_sheet": 0,
    "extra_in_sheet": 0,
