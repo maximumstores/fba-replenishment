@@ -9,10 +9,22 @@ on:
         description: "Обновить таблицу без сообщения в Telegram"
         type: boolean
         default: false
+      fail_test:
+        description: "Тест оповещения о сбое: упасть до расчёта (таблица и состояние не трогаются)"
+        type: boolean
+        default: false
+      alert_chat:
+        description: "Тест: chat_id, куда слать оповещение о сбое вместо подписчиков"
+        type: string
+        default: ""
 
 permissions:
   contents: write
   actions: read
+
+concurrency:
+  group: restock-report
+  cancel-in-progress: false
 
 jobs:
   report:
@@ -32,6 +44,9 @@ jobs:
           cache: pip
       - if: env.SKIP != '1'
         run: pip install -r requirements.txt
+      - name: Fail on purpose (test)
+        if: inputs.fail_test
+        run: echo "тестовый сбой" && exit 1
       - name: Build report
         if: env.SKIP != '1'
         env:
@@ -52,6 +67,7 @@ jobs:
         if: failure()
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          NOTIFY_CHAT: ${{ inputs.alert_chat }}
         run: |
           pip install -q requests
           python notify.py "⚠️ Отчёт FBA Restock сегодня не обновился: запуск упал. Данные в таблице — с прошлого удачного запуска ($(cat state/last_run.txt 2>/dev/null)). Разбираемся. ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

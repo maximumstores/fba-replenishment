@@ -59,6 +59,34 @@ def _text_now_only(market: str, now: pd.DataFrame, added: list[str], removed: li
     return "\n".join(lines).replace(",", " ")
 
 
+FRESH_TABLES = ("hopted_us_native", "hopted_ca_native", "hopted_de_native", "hopted_uk_native",
+                "amazon_starting_balance_native")
+
+
+def stale_sources(today=None) -> str:
+    """Пусто, если все источники остатков (BigQuery mt.*) обновлены сегодня по Киеву.
+    Иначе одна строка «остатки от <дата>, ночное обновление не прошло» (дата — самая старая из таблиц).
+    Отчёт при этом всё равно строится."""
+    tz = ZoneInfo("Europe/Kyiv")
+    today = today or datetime.now(tz).date()
+    try:
+        client = loaders.bq_client()
+        p = loaders._project()
+        dates = {t: client.get_table(f"{p}.mt.{t}").modified.astimezone(tz).date() for t in FRESH_TABLES}
+    except Exception as exc:
+        print(f"[warn] не смог проверить дату обновления источников: {exc}")
+        return "дату обновления остатков проверить не удалось"
+    return freshness_line(dates, today)
+
+
+def freshness_line(dates: dict, today) -> str:
+    old = {t: d for t, d in dates.items() if d < today}
+    if not old:
+        return ""
+    print(f"[warn] источники не обновлены сегодня: {old}")
+    return f"остатки от {min(old.values()):%d.%m}, ночное обновление не прошло"
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
@@ -70,6 +98,9 @@ def main(argv: list[str] | None = None) -> int:
     markets = tuple(m.strip().upper() for m in a.markets.split(",") if m.strip())
     data = market_stock.load_markets(markets)
     stamp = datetime.now(ZoneInfo("Europe/Kyiv")).strftime("%d.%m.%Y %H:%M")
+    stale = stale_sources()
+    if stale:  # одной строкой в шапке каждой вкладки и первой строкой в Telegram
+        stamp = f"{stamp} ⚠️ {stale}"
     sheet_id = os.getenv("RESTOCK_REPORT_SHEET", "")
     book = open_book(sheet_id) if sheet_id and not a.dry_run else None
     state = rr.load_state(STATE_FILE)
@@ -92,11 +123,9 @@ def main(argv: list[str] | None = None) -> int:
         t, ch, *_ = run_market(m, df, state, stamp, book)
         texts.append(t)
         changed = changed or ch
-    msg = "\n\n".join(texts)
+    msg = ("⚠️ " + stale + "\n\n" if stale else "") + "\n\n".join(texts)
     if sheet_id:
         msg += "\n\nТаблица: " + SHEET_URL.format(id=sheet_id)
-    if os.getenv("DASHBOARD_URL"):
-        msg += "\nПриложение: " + os.environ["DASHBOARD_URL"]
 
     if a.dry_run:
         print(msg + "\n\n[dry-run: ничего не записано и не отправлено]")

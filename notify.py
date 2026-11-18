@@ -16,10 +16,12 @@ def main() -> int:
     if not text or not token:
         print("нет текста или TELEGRAM_BOT_TOKEN")
         return 1
-    chats = tg_subscribers.recipients(tg_subscribers.sync(token))
+    only = os.getenv("NOTIFY_CHAT", "").strip()  # тест: слать только в этот чат, не подписчикам
+    chats = [only] if only else tg_subscribers.recipients(tg_subscribers.sync(token))
     for chat in chats:
-        requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
-                      json={"chat_id": chat, "text": text[:4000], "disable_web_page_preview": True}, timeout=30)
+        r = requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
+                          json={"chat_id": chat, "text": text[:4000], "disable_web_page_preview": True}, timeout=30)
+        print(chat, r.status_code)
     print(f"отправлено {len(chats)}")
     return 0
 
