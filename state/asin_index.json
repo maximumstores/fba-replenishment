@@ -1,11 +1,11 @@
 {
- "rows": 46416,
- "asins": 5571,
+ "rows": 47015,
+ "asins": 5570,
  "missing": [],
  "by_tab": {
   "AWD-inventory-reports": 1695,
   "All stock at warehouses": 57,
-  "Amazon UK": 1395,
+  "Amazon UK": 1392,
   "FF BOX DE Bremen Eglobetrade": 85,
   "FF BOX DE Bremen Maximumstores": 106,
   "FF BOX Kodersdorf": 205,
@@ -18,6 +18,6 @@
   "Orders": 17199,
   "Orders UK": 36,
   "Warehouse UK": 36,
-  "stock Amazon": 21572
+  "stock Amazon": 22174
  }
 }
